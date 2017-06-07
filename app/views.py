@@ -5,13 +5,37 @@ Werkzeug Documentation:  http://werkzeug.pocoo.org/documentation/
 This file creates your application.
 """
 
-from app import app
-from flask import render_template, request, redirect, url_for
+import os
+import time
+from app import app,db,login_manager,models
+from flask import render_template, request, redirect, url_for, flash, jsonify, make_response 
+from flask_login import login_user, logout_user, current_user, login_required
+from random import randint
+from werkzeug.utils import secure_filename
+import hashlib
+import uuid
+import json
+import requests
+from passlib.hash import pbkdf2_sha512
 
+###
+# Helper functions
+###
 
+def saltedhash(raw,salt):
+    salted = raw + salt
+    hash = pbkdf2_sha512.hash(salted)
+    return hash
+
+def verify(user,password):
+    salt = models.Authentication.query.filter_by(userid=user.userid).first().salt
+    salted = password+salt
+    hash = models.Authentication.query.filter_by(userid=user.userid).first().hash
+    return pbkdf2_sha512.verify(salted,hash)
+    
 ###
 # Routing for your application.
-###
+#
 
 @app.route('/')
 def home():
@@ -22,12 +46,51 @@ def home():
 @app.route('/about/')
 def about():
     """Render the website's about page."""
-    return render_template('about.html', name="Mary Jane")
+    return render_template('about.html')
+
+@app.route('/search/')
+def search():
+    """Render the website's about page."""
+    return render_template('search.html')
+
+@app.route('/newproject/')
+def newproject():
+    """Render the website's about page."""
+    return render_template('newproject.html')
+
+@app.route('/login',methods=['POST'])
+def login():
+    if request.method == "POST":
+        """Get data"""
+        data = request.get_json(force = True)
+        username = data["username"]
+        auth = models.Authentication.query.filter_by(username=username).first()
+    
+        if auth is None:
+            out={"error":True, "data":{}, "message":"Username or password is incorrect"}
+            
+        else:
+            hpass = saltedhash(data["password"],auth.salt)
+            if(auth.password == hpass):
+                user = models.User.query.filter_by(userid=auth.userid).first()  
+                login_user(user)
+                
+                u = {"id":user.userid, "name":user.name}
+                out={"error":None, "data":{"user":u}, "message":"Success"}
+               
+    else:
+        out={"error":True, "data":{}, "message":"Username or password is incorrect"}
+        
+    return jsonify(out)
 
 
 ###
 # The functions below should be applicable to all Flask apps.
 ###
+
+@login_manager.user_loader
+def load_user(user_id):
+    return  models.User.query.filter_by(userid=user_id).first()
 
 @app.route('/<file_name>.txt')
 def send_text_file(file_name):

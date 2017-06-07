@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block main %}
+<h1 class="page-header">New Project </h1>
+<p class="lead"> Project details</p>
+
+  <div class="Profile-form">
+    <form action="{{ url_for('newproject') }}" method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+         <input type="text" name="series" placeholder="Series"/> 
+      </div>
+      <div class="form-group">
+         <input type="text" name="fulltitle" placeholder="Full Title"/> 
+      </div>
+      <div class="form-group">
+         <input type="text" name="subtitle" placeholder="Sub Title"/> 
+      </div>
+        <div class="form-group">
+         <input type="text" name="shorttitle" placeholder="Short Title"/> 
+      </div>
+     <div class="form-group">
+         <input type="text" name="company" placeholder="Company"/> 
+      </div>
+     <div class="form-group">
+         <input type="text" name="publisher" placeholder="Publisher"/> 
+      </div>
+     <div class="form-group">
+         <input type="text" name="editions" placeholder="Editions"/> 
+      </div>
+      </div>
+     <div class="form-group">
+         <input type="text" name="vol" placeholder="Vol"/> 
+      </div>
+     <div class="form-group">
+         <input type="text" name="class" placeholder="Class"/> 
+      </div>
+
+     <div class="form-group">
+         <input type="text" name="format" placeholder="Format"/> 
+      </div>
+     <div class="form-group">
+         <input type="date" name="pud_date" placeholder="Pub Date"/> 
+      </div>
+      
+     <div class="form-group">
+         <input type="text" name="work" placeholder="Work"/> 
+      </div>
+      
+     <div class="form-group">
+         <input type="text" name="EAN_ISBN-13" placeholder="EAN/ISBN-13"/> 
+      </div>
+      
+     <div class="form-group">
+         <input type="text" name="season" placeholder="Season"/> 
+      </div>
+     <div class="form-group">
+         <input type="text" name="ISBN-10" placeholder="ISBN-10"/> 
+      </div>
+    <div class="form-group">
+            <select name="bisac_status">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+            </select>
+          </div>
+     <div class="form-group">
+         <input type="text" name="page_count" placeholder="Page Count"/> 
+      </div>
+     <div class="form-group">
+         <input type="text" name="trim" placeholder="Trim (w x l)"/> 
+      </div>          
+          
+
+        <div class="form-group">
+
+         <textarea name="note" placeholder="Addtional Notes" rows="10" cols="30"></textarea>
+      </div>
+    <div class="form-group">
+        <label>Upload Title Cover </label>
+        <input type="file" name="file" class="form-control"/>
+    </div>
+      <button type="submit" name="submit" class="btn btn-primary btn-block">Submit</button>
+    </form>
+  </div>
+{% endblock %}

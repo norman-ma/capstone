@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block main %}
+<h2> Uwi Press Title Management</h2><div>
+<form method="POST" enctype="multipart/form-data">
+<divclass="form-group">
+       Select By:     <select name="Search_by">
+                <option value="ISBN">ISBN</option>
+                <option value="Author">Author</option>
+                <option value="Title">Title</option>
+            </select> </div>
+     <div class="form-group">
+         <br>
+         Search: <input type="text" name="Search" /> 
+      </div>
+      <button type="submit" name="submit" >Submit</button>
+</form>
+
+</div>
+{% endblock %}

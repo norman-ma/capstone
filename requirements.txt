@@ -1,8 +1,20 @@
-Flask==0.12
-Jinja2==2.9.4
-MarkupSafe==0.23
-Werkzeug==0.11.15
-click==6.7
-gunicorn==19.6.0
-itsdangerous==0.24
-wsgiref==0.1.2
+# ----------------------
+# Flask
+# ----------------------
+flask
+Flask-WTF
+Flask-SQLAlchemy
+Flask-Migrate
+Flask-Login
+psycopg2
+requests
+
+# ----------------------
+# Production Server
+# ----------------------
+gunicorn
+
+# ----------------------
+# Python Modules
+# ----------------------
+passlib
