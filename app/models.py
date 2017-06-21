@@ -3,8 +3,10 @@ from . import db
 class User(db.Model):
     __table_args__ = {'extend_existing': True} 
     userid =  db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80))
+    fname = db.Column(db.String(80))
+    lname = db.Column(db.String(80))
     role = db.Column(db.String(80))
+    email = db.Column(db.String(80))
     auth = db.relationship('Authentication', backref='User',lazy='select',uselist=False)
     owns = db.relationship('Owns',backref='Users',lazy='select')
     
@@ -126,7 +128,8 @@ class Has(db.Model):
 
 class Author(db.Model):
     authorid = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80))
+    authorF = db.Column(db.String(80))
+    authorL = db.Column(db.String(80))
     by = db.relationship('By',backref='Author',lazy='select')
     
 class By(db.Model):

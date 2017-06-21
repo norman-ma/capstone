@@ -53,6 +53,11 @@ def search():
     """Render the website's search page."""
     return render_template('search.html')
 
+@app.route('/register/')
+def register():
+    """Render the register page for new user"""
+    return render_template('register.html')
+    
 @app.route('/title/new', methods=['POST','GET'])
 def newtitle():
     """Render the website's new title page."""
