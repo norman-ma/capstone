@@ -50,13 +50,16 @@ def about():
 
 @app.route('/search/')
 def search():
-    """Render the website's about page."""
+    """Render the website's search page."""
     return render_template('search.html')
 
-@app.route('/newproject/')
-def newproject():
-    """Render the website's about page."""
-    return render_template('newproject.html')
+@app.route('/title/new', methods=['POST','GET'])
+def newtitle():
+    """Render the website's new title page."""
+    if request.method=="POST":
+        print "pig"
+        
+    return render_template('newtitle.html')
 
 @app.route('/login',methods=['POST'])
 def login():

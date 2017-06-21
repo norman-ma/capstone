@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block main %}
+<h1 class="page-header">New Project </h1>
+<p class="lead"> Project details</p>
+
+  <div class="Profile-form">
+    <form name= "newproject" action="{{ url_for('newproject') }}" method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+         <input id="fulltitle" type="text" name="fulltitle" placeholder="Full Title"/> 
+      </div>
+      <div class="form-group">
+         <input id= "subtitle" type="text" name="subtitle" placeholder="Sub Title"/> 
+      </div>
+      
+        <div class="form-group">
+         <textarea id="note" name="description" placeholder="Description" rows="10" cols="30"></textarea>
+        </div>
+             <div class="form-group">
+         <input id="authorF" type="text" name="Author First Name" placeholder="Publisher"/> 
+      </div>
+              </div>
+             <div class="form-group">
+         <input id="authorL" type="text" name="Author Last Name" placeholder="Publisher"/> 
+      </div>
+        <div class="form-group">
+            <label>Upload Title Cover </label>
+            <input id="file" type="file" name="file" class="form-control"/>
+        </div>
+        <button id="newTitle" type="submit" name="submit" class="btn btn-primary btn-block">Submit</button>
+    </form>
+  </div>
+{% endblock %}
