@@ -114,6 +114,7 @@ class Title(db.Model):
     title = db.Column(db.String(80))
     subtitle = db.Column(db.String(80))
     description = db.Column(db.Text)
+    status = db.Column(db.String(80))
     belongs_to = db.relationship('Belongs_to',backref='Title',lazy='select')
     by = db.relationship('By',backref='Title',lazy='select')
     publishing = db.relationship('Publishing',backref='Title',lazy='select')
@@ -128,8 +129,8 @@ class Has(db.Model):
 
 class Author(db.Model):
     authorid = db.Column(db.Integer, primary_key=True)
-    authorF = db.Column(db.String(80))
-    authorL = db.Column(db.String(80))
+    firstname = db.Column(db.String(80))
+    lastname = db.Column(db.String(80))
     by = db.relationship('By',backref='Author',lazy='select')
     
 class By(db.Model):
@@ -161,4 +162,5 @@ class Sales(db.Model):
     titleid = db.Column(db.Integer,db.ForeignKey(Title.titleid), primary_key=True)
     totalsales = db.Column(db.Float)
     internationalsales = db.Column(db.Float)
+    localsales = db.Column(db.Float)
     regionalsales = db.Column(db.Float)

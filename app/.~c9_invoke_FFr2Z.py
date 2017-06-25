@@ -33,8 +33,44 @@ def verify(user,password):
     hash = models.Authentication.query.filter_by(userid=user.userid).first().hash
     return pbkdf2_sha512.verify(salted,hash)
     
+def genID():
+    return int(uuid.uuid4().int & (1<<16)-1)
+    
+def send_email(to_name, to_addr, subj, msg):
+    
+    from_name = 'noreply@title.manage'
+    from_addr = 'noreply@title.manage'
+    
+    # Credentials
+    username = 'thewishlyco@gmail.com'
+    password = 'xzhhkglidexavsuf'
+    
+    message = """From: {} <{}>\nTo: {} <{}>\nSubject: {}\n\n{}"""
+    message_to_send = message.format(from_name, from_addr, to_name, to_addr, subj, msg)
+    
+    # The actual mail send
+    try:
+        server = smtplib.SMTP('smtp.gmail.com:587')
+    except smtplib.socket.gaierror:
+        return False
+        
+    server.starttls()
+    try:
+        server.login(username, password)
+    except SMTPAuthenticationError:
+        server.quit()
+        return False
+    try:
+        server.sendmail(from_addr, to_addr, message_to_send)
+        return True
+    except Exception:
+        server.quit()
+        return False
+    finally:
+        server.quit()
+    
 ###
-# Routing for your application.
+        data = request.form
 #
 
 @app.route('/')
@@ -48,16 +84,6 @@ def about():
     """Render the website's about page."""
     return render_template('about.html')
 
-@app.route('/sales/')
-def sales():
-    """Render the website's sales page."""
-    return render_template('sales.html')
-
-@app.route('/publishing/')
-def publishing():
-    """Render the website's publishing info"""
-    return render_template('publishing.html')    
-    
 @app.route('/search/')
 def search():
     """Render the website's search page."""
@@ -76,32 +102,66 @@ def newtitle():
         
     return render_template('newtitle.html')
 
-@app.route('/login',methods=['POST'])
+@app.route('/login',methods=['GET','POST'])
 def login():
     if request.method == "POST":
         """Get data"""
-        data = request.get_json(force = True)
+        data = request.form
         username = data["username"]
         auth = models.Authentication.query.filter_by(username=username).first()
     
         if auth is None:
-            out={"error":True, "data":{}, "message":"Username or password is incorrect"}
+            flash("Username or password is incorrect")
             
         else:
             hpass = saltedhash(data["password"],auth.salt)
             if(auth.password == hpass):
                 user = models.User.query.filter_by(userid=auth.userid).first()  
                 login_user(user)
-                
-                u = {"id":user.userid, "name":user.name}
-                out={"error":None, "data":{"user":u}, "message":"Success"}
-               
-    else:
-        out={"error":True, "data":{}, "message":"Username or password is incorrect"}
         
-    return jsonify(out)
+    return render_template('login.html')
 
 
+@app.route('/user/new', methods=['GET','POST'])
+def newuser():
+    if request.method == "POST":
+        """Get data"""
+        data = request.form
+        fname = data["fname"]
+        lname = data["lname"]
+        role = data["role"]
+        email = data["email"]
+        id = genID()
+        
+        user = models.User(userid=id,firstname=fname,lastname=lname,role=role,email=email)
+        db.create_all()
+        db.session.add(user)
+        db.session.commit()
+        
+        data = request.get_json(force = True)
+        to_name = lname+', '+fname
+        to_addr = email
+        link = app.config['SERVER_NAME']+'/user/register/'+id
+        
+        """Make Message"""
+        msg = """ Dear {},\n Please follow the following link to complete your user registration: \n{}\n Thank you.""".format(to_name,link)
+        subj = """Title Management System User Registration""".format(current_user.name)
+        
+        """Send Message"""
+        
+        send_email(to_name,to_addr,subj,msg)
+        
+    return render_template("newuser.html")
+    
+@app.route('/user/register/<userid>', methods=['GET','POST'])
+def register(userid):
+    if request.method == "POST":
+        """Get data"""
+        data = request.form
+        uname = data["username"]
+        pword = data["password"]
+        salt =  uuid.uuid4().hex
+        
 ###
 # The functions below should be applicable to all Flask apps.
 ###

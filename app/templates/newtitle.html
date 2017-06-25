@@ -6,24 +6,22 @@
 
   <div class="Profile-form">
     <form name= "newproject" action="{{ url_for('newtitle') }}" method="POST" enctype="multipart/form-data">
-      <div class="form-group">
-         <input type="text" name="title" placeholder="Full Title"/> 
-      </div>
-      <div class="form-group">
-         <input type="text" name="subtitle" placeholder="Sub Title"/> 
-      </div>
-      
         <div class="form-group">
-         <textarea name="description" placeholder="Description" rows="10" cols="30"></textarea>
+            <input type="text" name="title" placeholder="Full Title" ng-model="title"/> 
         </div>
-             <div class="form-group">
-         <input type="text" name="authorF" placeholder="Author First Name"/> 
-      </div>
-              </div>
-             <div class="form-group">
-         <input  type="text" name="authorL" placeholder="Author Last Name"/> 
-      </div>
-
+        <div class="form-group">
+            <input type="text" name="subtitle" placeholder="Sub Title" ng-model="subtitle"/> 
+        </div>
+        <div class="form-group">
+            <textarea name="description" placeholder="Description" rows="10" cols="30" ng-model="desc"></textarea>
+        </div>
+        <div class="form-group">
+            <input type="text" name="authorF" placeholder="Author First Name" ng-model="authorF"/> 
+        </div>
+        
+        <div class="form-group">
+            <input  type="text" name="authorL" placeholder="Author Last Name" ng-model="authorL"/> 
+        </div>
         <button id="newTitle" type="submit" name="submit">Submit</button>
     </form>
   </div>
