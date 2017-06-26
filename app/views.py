@@ -17,6 +17,8 @@ import uuid
 import json
 import requests
 from passlib.hash import pbkdf2_sha512
+import smtplib
+
 
 ###
 # Helper functions
@@ -33,6 +35,40 @@ def verify(user,password):
     hash = models.Authentication.query.filter_by(userid=user.userid).first().hash
     return pbkdf2_sha512.verify(salted,hash)
     
+def genID():
+    return int(uuid.uuid4().int & (1<<16)-1)
+    
+def send_email(to_name, to_addr, subj, msg):
+    
+    from_name = current_user.name 
+    from_addr = 'thewishlyco@gmail.com'
+    # Credentials
+    username = 'thewishlyco@gmail.com'
+    password = 'xzhhkglidexavsuf'
+    
+    message = """From: {} <{}>\nTo: {} <{}>\nSubject: {}\n\n{}"""
+    message_to_send = message.format(from_name, from_addr, to_name, to_addr, subj, msg)
+    
+    # The actual mail send
+    try:
+        server = smtplib.SMTP('smtp.gmail.com:587')
+    except smtplib.socket.gaierror:
+        return False
+        
+    server.starttls()
+    try:
+        server.login(username, password)
+    except SMTPAuthenticationError:
+        server.quit()
+        return False
+    try:
+        server.sendmail(from_addr, to_addr, message_to_send)
+        return True
+    except Exception:
+        server.quit()
+        return False
+    finally:
+        server.quit()
 ###
 # Routing for your application.
 #
@@ -72,11 +108,6 @@ def publishing():
 def search():
     """Render the website's search page."""
     return render_template('search.html')
-
-@app.route('/register/')
-def register():
-    """Render the register page for new user"""
-    return render_template('register.html')
     
 @app.route('/title/new', methods=['POST','GET'])
 def newtitle():
@@ -90,28 +121,81 @@ def newtitle():
 def login():
     if request.method == "POST":
         """Get data"""
-        data = request.get_json(force = True)
+        data = request.form
         username = data["username"]
         auth = models.Authentication.query.filter_by(username=username).first()
     
         if auth is None:
-            out={"error":True, "data":{}, "message":"Username or password is incorrect"}
+            flash("Username or Password is incorrect.")
             
         else:
             hpass = saltedhash(data["password"],auth.salt)
             if(auth.password == hpass):
                 user = models.User.query.filter_by(userid=auth.userid).first()  
                 login_user(user)
-                
-                u = {"id":user.userid, "name":user.name}
-                out={"error":None, "data":{"user":u}, "message":"Success"}
                
     else:
-        out={"error":True, "data":{}, "message":"Username or password is incorrect"}
+        flash("Username or Password is incorrect.")
         
-    return jsonify(out)
+    return render_template("login.html")
 
-
+@app.route('/logout')
+def logout():
+    logout_user()
+    redirect("home.html")
+    
+@app.route('/user/new',methods=['GET','POST'])
+@login_required
+def newuser():
+    if request.method == "POST":
+        """Get data"""
+        data = request.form
+        
+        fname = data["fname"]
+        lname = data["lname"]
+        role = data["role"]
+        email = data["email"]
+        uid = genID()
+        
+        """Create new user"""
+        user = models.User(userid=uid,firstname=fname,lastname=lname,role=role,email=email)
+        db.create_all()
+        db.session.add(user)
+        db.session.commit()
+        
+        """Send registration email"""
+        
+        to_name = fname + " " + lname
+        to_addr = email
+        link = app.config['SERVER_NAME']+'/user/register/'+uid
+        
+        msg = """ Dear {},\n Please follow the following link to complete user registration:\n {} \n Regards, \n TitleMangementSystem """.format(to_name,link)
+        subj = "Complete TitleManagementSystem User Registration"
+        
+        send_email(to_name,to_addr,subj,msg)
+        
+    return render_template("newuser.html")
+        
+@app.route('/user/register/<userid>')
+def register(userid):
+    if request.method == "POST":
+        """Get data"""
+        data = request.form
+        uname = data["username"]
+        pword = data["password"]
+        
+        salt = uuid.uuid4().hex
+        phash = saltedhash(pword,salt)
+        
+        """Create Authentication Profile"""
+        auth = models.Authentication(userid=userid,hash=phash,salt=salt)
+        db.create_all()
+        db.session.add(auth)
+        db.session.commit()
+    
+    return render_template("register.html")
+        
+        
 ###
 # The functions below should be applicable to all Flask apps.
 ###

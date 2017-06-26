@@ -3,8 +3,8 @@ from . import db
 class User(db.Model):
     __table_args__ = {'extend_existing': True} 
     userid =  db.Column(db.Integer, primary_key=True)
-    fname = db.Column(db.String(80))
-    lname = db.Column(db.String(80))
+    firstname = db.Column(db.String(80))
+    lastname = db.Column(db.String(80))
     role = db.Column(db.String(80))
     email = db.Column(db.String(80))
     auth = db.relationship('Authentication', backref='User',lazy='select',uselist=False)
