@@ -43,17 +43,27 @@ def home():
     return render_template('home.html')
 
 
-@app.route('/about/')
+@app.route('/about')
 def about():
     """Render the website's about page."""
     return render_template('about.html')
 
-@app.route('/sales/')
+@app.route('/activity')
+def activity():
+    """Render the website's activity page."""
+    return render_template('activity.html')
+    
+@app.route('/event')
+def event():
+    """Render the website's event page."""
+    return render_template('event.html')
+    
+@app.route('/sales')
 def sales():
     """Render the website's sales page."""
     return render_template('sales.html')
 
-@app.route('/publishing/')
+@app.route('/publishing')
 def publishing():
     """Render the website's publishing info"""
     return render_template('publishing.html')    

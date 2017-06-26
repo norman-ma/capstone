@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block main %}
+<form method="POST" enctype="multipart/form-data">
+
+     <div class="form-group">
+         <br>
+       <input type="text" name="startTime" placeholder="Start Time"/> 
+      </div>
+     <div class="form-group">
+     <br>
+       <input type="text" name="endTime" placeholder="End Time"/> 
+      </div>
+     <div class="form-group">
+     <br>
+       <input type="text" name="venue" placeholder="Venue"/> 
+      </div>
+
+      <button type="submit" name="submit" >Submit</button>
+</form>
+
+
+{% endblock %}
