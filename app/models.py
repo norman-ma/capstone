@@ -142,7 +142,7 @@ class By(db.Model):
 class Category(db.Model):
     categoryid = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80))
-    belongs_to = db.relationship('Category',backref='Title',lazy='select')
+    belongs_to = db.relationship('Category',backref='Title',lazy='select',primaryjoin="categoryid == Category.categoryid")
     
 class Belongs_to(db.Model):
     __tablename__ = 'belongs_to'
