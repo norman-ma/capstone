@@ -1,13 +1,13 @@
 from . import db
 
-class User(db.Model):
+class Users(db.Model):
     __table_args__ = {'extend_existing': True} 
     userid =  db.Column(db.Integer, primary_key=True)
     firstname = db.Column(db.String(80))
     lastname = db.Column(db.String(80))
     role = db.Column(db.String(80))
     email = db.Column(db.String(80))
-    auth = db.relationship('Authentication', backref='User',lazy='select',uselist=False)
+    auth = db.relationship('Authentication', backref='Users',lazy='select',uselist=False)
     owns = db.relationship('Owns',backref='Users',lazy='select')
     
     def is_authenticated(self):
@@ -26,11 +26,11 @@ class User(db.Model):
             return str(self.userid)  # python 3 support
 
     def __repr__(self):
-        return '<User %r>' % (self.name)
+        return '<Users %r>' % (self.name)
 
 class Authentication(db.Model):
     __table_args__ = {'extend_existing': True} 
-    userid = db.Column(db.Integer, db.ForeignKey(User.userid), primary_key=True)
+    userid = db.Column(db.Integer, db.ForeignKey(Users.userid), primary_key=True)
     username = db.Column(db.String(80),unique=True)
     hash = db.Column(db.Text)
     salt = db.Column(db.String(80))
@@ -47,7 +47,7 @@ class Phase(db.Model):
 class Owns(db.Model):
     __tablename__ = 'owns'
     __table_args__ = (db.PrimaryKeyConstraint('userid', 'phaseid'),{'extend_existing':True})
-    userid = db.Column(db.Integer,db.ForeignKey(User.userid))
+    userid = db.Column(db.Integer,db.ForeignKey(Users.userid))
     phaseid = db.Column(db.Integer,db.ForeignKey(Phase.phaseid))
 
 class Activity(db.Model):
@@ -60,11 +60,11 @@ class Activity(db.Model):
 
 class Event(Activity):
     activityid = db.Column(db.Integer,db.ForeignKey(Activity.activityid),primary_key=True)
-    startTime = db.Column(db.DateTime)
-    endTime = db.Column(db.DateTime)
+    starttime = db.Column(db.Time)
+    endtime = db.Column(db.Time)
     venue = db.Column(db.String(80))
 
-class ConsistsOf(db.Model):
+class Consists_Of(db.Model):
     __tablename__ = 'consists_of'
     __table_args__ = (db.PrimaryKeyConstraint('phaseid', 'activityid'),)
     phaseid = db.Column(db.Integer,db.ForeignKey(Phase.phaseid))
@@ -104,11 +104,6 @@ class Includes(db.Model):
     phaseid = db.Column(db.Integer,db.ForeignKey(Phase.phaseid))
     milestoneid = db.Column(db.Integer,db.ForeignKey(Milestone.milestoneid))
  
-class Stage(db.Model):
-    stageid = db.Column(db.Integer,primary_key=True)
-    name = db.Column(db.String(80))
-    has = db.relationship('Has',backref='Stage',lazy='select')  
-
 class Title(db.Model):
     titleid = db.Column(db.Integer,primary_key=True)
     title = db.Column(db.String(80))
@@ -122,10 +117,10 @@ class Title(db.Model):
 
 class Has(db.Model):
     __tablename__ = 'has'
-    __table_args__ = (db.PrimaryKeyConstraint('titleid', 'phaseid','stageid'),)
+    __table_args__ = (db.PrimaryKeyConstraint('titleid', 'phaseid'),)
     titleid = db.Column(db.Integer,db.ForeignKey(Title.titleid))
     phaseid = db.Column(db.Integer,db.ForeignKey(Phase.phaseid))
-    stageid = db.Column(db.Integer,db.ForeignKey(Stage.stageid))
+    stage = db.Column(db.String(80))
 
 class Author(db.Model):
     authorid = db.Column(db.Integer, primary_key=True)
@@ -142,7 +137,7 @@ class By(db.Model):
 class Category(db.Model):
     categoryid = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80))
-    belongs_to = db.relationship('Category',backref='Title',lazy='select',primaryjoin="categoryid == Category.categoryid")
+    belongs_to = db.relationship('Belongs_to',backref='Category',lazy='select', primaryjoin="Category.categoryid==Belongs_to.categoryid")
     
 class Belongs_to(db.Model):
     __tablename__ = 'belongs_to'

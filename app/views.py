@@ -131,7 +131,7 @@ def login():
         else:
             hpass = saltedhash(data["password"],auth.salt)
             if(auth.password == hpass):
-                user = models.User.query.filter_by(userid=auth.userid).first()  
+                user = models.Users.query.filter_by(userid=auth.userid).first()  
                 login_user(user)
                
     else:
@@ -158,7 +158,7 @@ def newuser():
         uid = genID()
         
         """Create new user"""
-        user = models.User(userid=uid,firstname=fname,lastname=lname,role=role,email=email)
+        user = models.Users(userid=uid,firstname=fname,lastname=lname,role=role,email=email)
         db.create_all()
         db.session.add(user)
         db.session.commit()
@@ -176,7 +176,7 @@ def newuser():
         
     return render_template("newuser.html")
         
-@app.route('/user/register/<userid>')
+@app.route('/user/register/<userid>',methods=['GET','POST'])
 def register(userid):
     if request.method == "POST":
         """Get data"""
@@ -194,15 +194,41 @@ def register(userid):
         db.session.commit()
     
     return render_template("register.html")
+
+@app.route('/users/manage',methods=['GET','POST'])
+def manageusers():
+    if request.method == "POST":
+        """Get data"""
+        data = request.form
+        #to be completed
+    
+    return render_template("users.html")
         
+@app.route('api/title/<titleid>',methods=['POST','GET'])
+def titleinfo(titleid):
+    
+    title = models.Title.query.filter_by(titleid=titleid).first
+
+    if request.method = 'GET':
         
+        data = {'title':title.title, 'subttile':title.subtitle,'description':title.description,'status':title.status}
+        
+        out = {'error':None, 'data':data, 'message':'Success'}
+    
+        return jsonify(out)
+
+@app.route('api/title/<stage>',methods=['POST','GET'])
+def phaselist(stage):
+    
+    
+    
 ###
 # The functions below should be applicable to all Flask apps.
 ###
 
 @login_manager.user_loader
 def load_user(user_id):
-    return  models.User.query.filter_by(userid=user_id).first()
+    return  models.Users.query.filter_by(userid=user_id).first()
 
 @app.route('/<file_name>.txt')
 def send_text_file(file_name):
