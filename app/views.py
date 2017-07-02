@@ -209,7 +209,7 @@ def titleinfo(titleid):
     
     title = models.Title.query.filter_by(titleid=titleid).first
 
-    if request.method = 'GET':
+    if request.method == 'GET':
         
         data = {'title':title.title, 'subttile':title.subtitle,'description':title.description,'status':title.status}
         
@@ -220,8 +220,158 @@ def titleinfo(titleid):
 @app.route('api/title/<stage>',methods=['POST','GET'])
 def phaselist(stage):
     
+    if request.method == 'GET':
+        
+        titles = models.Title.query.join(models.Has, models.Phase, models.Title.titleid == models.Has.titleid, models.Phase.phaseid = models.Has.phaseid ).filter_by(models.Phase.stage==stage).all()
+        
+        data = []
+        
+        for title in titles:
+            
+            record = {'title':title.title, 'subttile':title.subtitle,'description':title.description,'status':title.status}
+            data.append(record)
+        
+        out = {'error':None, 'data':data, 'message':'Success'}
     
+        return jsonify(out)
+        
+    if request.method == 'POST':
+        
+        criteria = request.get_json(force=True)
+        status = criteria['status']
+        
+        data = []
+        
+        titles = models.Title.query.join(models.Has, models.Phase, models.Title.titleid == models.Has.titleid, models.Phase.phaseid = models.Has.phaseid ).filter_by(models.Phase.stage==stage, models.Title.status==status).all()
+        
+        for title in titles:
+            
+            record = {'title':title.title, 'subttile':title.subtitle,'description':title.description,'status':title.status}
+            data.append(record)
+        
+        out = {'error':None, 'data':data, 'message':'Success'}
+        
+        return jsonify(out)
+        
+
+@app.route('api/<titleid/activity>',methods=['GET','POST'])
+def activitylist(titleid):
     
+    if request.method == 'GET':
+        
+        phaselist = models.Phase.query.join(models.Has, models.Phase.phaseid == models.Has.phaseid).add_columns(models.Phase.phaseid).filter_by(models.Has.titleid == titleid).all()
+        actlist = models.Activity.query.join(models.Consists_Of, models.Activity.activityid == models.Consists_Of.activityid).filter_by(models.Has.phaseid in phaselist).all()
+        
+        data = []
+        
+        for activity in actlist:
+            
+            record = {'name':activity.name, 'startdate':activity.startdate,'duration':activity.duration,'completed':activity.completed}
+            data.append(record)
+        
+        out = {'error':None, 'data':data, 'message':'Success'}
+        
+        return jsonify(out)
+        
+    if request.method == 'POST':
+        
+        criteria = request.get_json(force=True)
+        showcomplete = criteria['showCompleted']
+        
+        phaselist = models.Phase.query.join(models.Has, models.Phase.phaseid == models.Has.phaseid).add_columns(models.Phase.phaseid).filter_by(models.Has.titleid == titleid).all()
+        actlist = models.Activity.query.join(models.Consists_Of, models.Activity.activityid == models.Consists_Of.activityid).filter_by(models.Has.phaseid in phaselist, models.Activity.completed == showcomplete).all()
+        
+        data = []
+        
+        for activity in actlist:
+            
+            record = {'name':activity.name, 'startdate':activity.startdate,'duration':activity.duration,'completed':activity.completed}
+            data.append(record)
+        
+        out = {'error':None, 'data':data, 'message':'Success'}
+        
+        return jsonify(out)
+        
+@app.route('api/<titleid>/activity/new',methods=['POST'])
+newActivity(titleid):
+    
+    if request.method = 'POST':
+        
+        criteria = request.get_json(force=True)
+        stage = criteria['stage']
+        
+        data = criteria['data']
+        
+        phase = models.Phase.query.join(models.Has,models.Phase.phaseid==models.Has.phaseid).filter_by(models.Has.titleid = titleid, models.Phase.stage == stage).first()
+        
+        actid = genId()
+        name = date['name']
+        startdate = data['startdate']
+        duration = data['duration']
+        completed = False
+        
+        if criteria['isEvent'] == 'True':
+            starttime = data['starttime']
+            endtime = data['endtime']
+            venue = data['venue']
+            
+            activity = models.Event(activityid=actid,name=name,startdate=startate,duration=duration,competed=completed,startdate=starttime,endtime=endtime,venue=venue)
+        
+        else:
+            
+            activity = models.Activity(activityid=actid,name=name,startdate=startate,duration=duration,competed=completed)
+        
+        db.create_all()
+        db.session.add(activity)
+        db.session.commit()
+        
+        out = {'error':None, 'data':[], 'message':'Success'}
+        
+        return jsonify(out)
+
+@app.route('api/<activityid>',methods = ['GET','POST'])
+def activityinfo(activityid):
+    
+    activity = models.Activity.query.filter_by(activityid = activityid).first()
+    
+    if request.method == 'GET':
+        
+        event = models.Event.query.filter_by(activityid = activityid).first()
+        
+        if event.query.exists():
+            data = {'name':event.name, 'startdate':event.startdate,'duration':event.duration,'completed':event.completed, 'starttime': event.starttime, 'endtime': event.endtime, 'venue': event.venue}
+            
+        else:
+        
+            data = {'name':activity.name, 'startdate':activity.startdate,'duration':activity.duration,'completed':activity.completed}
+            
+        out = {'error':None, 'data':data, 'message':'Success'}
+        
+        return jsonify(out)
+        
+@app.route('api/<activityid>/resources', methods = ['GET','POST'])
+def resourcelist(activityid):
+    
+    resList = models.Resource.query.join(models.Uses,models.Resource.resourceid==models.Uses.resourceid).filter_by(models.Uses.activityid==activityid).all()
+    
+    if request.method == 'GET':
+        data = []
+        
+        for resource in reslist:
+            human = models.HumanResource.query.filter_by(resourceid==resource.resourceid).first()
+            
+            if human.query.exists():
+                
+                data.append({'name'=human.name, 'duration'=human.duration, 'rate'=human.rate})
+            
+            else:
+                
+                material = models.MaterialResource.query.filter_by(resourceid==resource.resourceid).first()
+                data.append({'name'=material.name,'qty'=material.qty, 'unitcost'=material.unitcost})
+        
+        out = {'error':None, 'data':data, 'message':'Success'}
+        
+        return jsonify(out)
 ###
 # The functions below should be applicable to all Flask apps.
 ###

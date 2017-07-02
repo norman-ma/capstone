@@ -39,6 +39,7 @@ class Phase(db.Model):
     __table_args__ = {'extend_existing': True} 
     phaseid = db.Column(db.Integer,primary_key=True)
     budget = db.Column(db.Integer)
+    stage = db.Column(db.String(80))
     owns = db.relationship('Owns',backref='Phase',lazy='select')
     consists_of = db.relationship('Consists_Of',backref='Phase',lazy='select')
     includes = db.relationship('Includes',backref='Phase',lazy='select')
@@ -55,6 +56,7 @@ class Activity(db.Model):
     name = db.Column(db.String(80))
     startdate = db.Column(db.DateTime)
     duration = db.Column(db.Integer)
+    completed = db.Column(db.Boolean)
     uses = db.relationship('Uses',backref='Activity',lazy='select')
     consists_of = db.relationship('Consists_Of',backref='Activity',lazy='select')
 
@@ -120,7 +122,6 @@ class Has(db.Model):
     __table_args__ = (db.PrimaryKeyConstraint('titleid', 'phaseid'),)
     titleid = db.Column(db.Integer,db.ForeignKey(Title.titleid))
     phaseid = db.Column(db.Integer,db.ForeignKey(Phase.phaseid))
-    stage = db.Column(db.String(80))
 
 class Author(db.Model):
     authorid = db.Column(db.Integer, primary_key=True)
