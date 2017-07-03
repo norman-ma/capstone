@@ -109,14 +109,6 @@ def search():
     """Render the website's search page."""
     return render_template('search.html')
     
-@app.route('/title/new', methods=['POST','GET'])
-def newtitle():
-    """Render the website's new title page."""
-    if request.method=="POST":
-        print "pig"
-        
-    return render_template('newtitle.html')
-
 @app.route('/login',methods=['POST'])
 def login():
     if request.method == "POST":
@@ -203,6 +195,32 @@ def manageusers():
         #to be completed
     
     return render_template("users.html")
+    
+@app.route('/title/new', methods=['POST','GET'])
+def newtitle():
+    """Render the website's new title page."""
+    folder = app.config['UPLOAD_FOLDER']
+    
+    if request.method=="POST":
+        form = request.form
+        title = form['title']
+        subtitle = form['subtitle']
+        description = form['description']
+        status = 'IN PROGRESS'
+        
+        tid = genID()
+        
+        new = models.Title(titleid=tid,title=title,subtitle=subtitle,description=description,status=status)
+        db.create_all()
+        db.session.add(new)
+        
+        path = folder+'/'+tid
+        
+        if not os.path.exists(path):
+            os.makedirs(path)
+             db.commit()
+    return render_template('newtitle.html')
+
         
 @app.route('api/title/<titleid>',methods=['POST','GET'])
 def titleinfo(titleid):
@@ -316,13 +334,17 @@ newActivity(titleid):
             venue = data['venue']
             
             activity = models.Event(activityid=actid,name=name,startdate=startate,duration=duration,competed=completed,startdate=starttime,endtime=endtime,venue=venue)
+            
         
         else:
             
             activity = models.Activity(activityid=actid,name=name,startdate=startate,duration=duration,competed=completed)
+            
+        consists_of = models.Consists_Of(phaseid=phase.phaseid,activityid=activity.activityid)
         
         db.create_all()
         db.session.add(activity)
+        db.session.add(consists_of)
         db.session.commit()
         
         out = {'error':None, 'data':[], 'message':'Success'}
@@ -370,6 +392,37 @@ def resourcelist(activityid):
                 data.append({'name'=material.name,'qty'=material.qty, 'unitcost'=material.unitcost})
         
         out = {'error':None, 'data':data, 'message':'Success'}
+        
+        return jsonify(out)
+        
+@app.route('api/<activityid>/resources/new',methods=['POST'])
+def addResource(activityid):
+    
+    if request.method == 'POST':
+        data = request.get_json(force=True)
+        
+        name = data['name']
+        resid = genID()
+        if data['type']=='HumanResource':
+            duration = data['duration']
+            rate = data['rate']
+            res = models.HumanResource(resourceid=resid,name=name,duration=duration,rate=rate)
+            db.create_all()
+            db.session.add(res)
+            
+        else:
+            qty = data['qty']
+            unitcost = data['unitcost']
+            res = models.MaterialResource(resourceid=resid,name=name,qty=qty,unitcost=unitcost)
+            db.create_all()
+            db.session.add(res)
+            
+        uses = models.Uses(activityid=activityid,resourceid=resid)
+        db.session.add(uses)
+        db.session.commit()
+        
+         
+        out = {'error':None, 'data':{}, 'message':'Success'}
         
         return jsonify(out)
 ###
