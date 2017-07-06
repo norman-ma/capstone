@@ -40,6 +40,7 @@ class Phase(db.Model):
     phaseid = db.Column(db.Integer,primary_key=True)
     budget = db.Column(db.Integer)
     stage = db.Column(db.String(80))
+    current = db.Column(db.Boolean)
     owns = db.relationship('Owns',backref='Phase',lazy='select')
     consists_of = db.relationship('Consists_Of',backref='Phase',lazy='select')
     includes = db.relationship('Includes',backref='Phase',lazy='select')

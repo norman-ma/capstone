@@ -8,7 +8,7 @@ This file creates your application.
 import os
 import time
 from app import app,db,login_manager,models
-from flask import render_template, request, redirect, url_for, flash, jsonify, make_response 
+from flask import render_template, request, redirect, url_for, flash, jsonify, make_response, current_app, send_from_directory
 from flask_login import login_user, logout_user, current_user, login_required
 from random import randint
 from werkzeug.utils import secure_filename
@@ -77,36 +77,28 @@ def send_email(to_name, to_addr, subj, msg):
 def home():
     """Render website's home page."""
     return render_template('home.html')
-
-
-@app.route('/about')
-def about():
-    """Render the website's about page."""
-    return render_template('about.html')
-
-@app.route('/activity')
-def activity():
-    """Render the website's activity page."""
-    return render_template('activity.html')
     
-@app.route('/event')
-def event():
-    """Render the website's event page."""
-    return render_template('event.html')
-    
-@app.route('/sales')
-def sales():
-    """Render the website's sales page."""
-    return render_template('sales.html')
-
-@app.route('/publishing')
-def publishing():
-    """Render the website's publishing info"""
-    return render_template('publishing.html')    
-    
-@app.route('/search/')
+@app.route('api/search/',methods=['POST'])
 def search():
     """Render the website's search page."""
+    
+    if request.method=='POST':
+        
+        data = request.get_json(force=True)
+        keyword = data['keyword']
+        
+        query = models.Title.query.join(models.Publishing, models.Sales, models.Title.titleid == models.Publishing.titleid, models.Title.titleid == models.Sales.titleid).contains(keyword).all()
+        
+        data = []
+        
+        for result in query:
+            data.append({'titleid':result.titleid,'title':result.title})
+            
+        out = {'error':None, 'data':data, 'message':'Success'}
+        
+        return jsonify(out)
+        
+    
     return render_template('search.html')
     
 @app.route('/login',methods=['POST'])
@@ -135,6 +127,8 @@ def login():
 def logout():
     logout_user()
     redirect("home.html")
+
+'''USER MANAGEMENT'''
     
 @app.route('/user/new',methods=['GET','POST'])
 @login_required
@@ -196,6 +190,8 @@ def manageusers():
     
     return render_template("users.html")
     
+'''TITLE MANAGEMENT'''
+    
 @app.route('/title/new', methods=['POST','GET'])
 def newtitle():
     """Render the website's new title page."""
@@ -218,7 +214,7 @@ def newtitle():
         
         if not os.path.exists(path):
             os.makedirs(path)
-             db.commit()
+            db.commit()
     return render_template('newtitle.html')
 
         
@@ -240,7 +236,7 @@ def phaselist(stage):
     
     if request.method == 'GET':
         
-        titles = models.Title.query.join(models.Has, models.Phase, models.Title.titleid == models.Has.titleid, models.Phase.phaseid = models.Has.phaseid ).filter_by(models.Phase.stage==stage).all()
+        titles = models.Title.query.join(models.Has, models.Phase, models.Title.titleid == models.Has.titleid, models.Phase.phaseid == models.Has.phaseid ).filter_by(models.Phase.stage==stage).all()
         
         data = []
         
@@ -260,7 +256,7 @@ def phaselist(stage):
         
         data = []
         
-        titles = models.Title.query.join(models.Has, models.Phase, models.Title.titleid == models.Has.titleid, models.Phase.phaseid = models.Has.phaseid ).filter_by(models.Phase.stage==stage, models.Title.status==status).all()
+        titles = models.Title.query.join(models.Has, models.Phase, models.Title.titleid == models.Has.titleid, models.Phase.phaseid == models.Has.phaseid ).filter_by(models.Phase.stage==stage, models.Title.status==status).all()
         
         for title in titles:
             
@@ -271,8 +267,69 @@ def phaselist(stage):
         
         return jsonify(out)
         
+@app.route('/<titleid>/sales', methods = ['GET','POST'])
+def sales(titleid):
+    """Render the website's sales page."""
+    
+    record = models.Sales.query.filter_by(titleid == titleid).first()
+    
+    if request.method == "POST":
+        """Get data"""
+        data = request.form
+        totalsales  = data['totalsales']
+        internationalsales = data['internationalsales']
+        regionalsales = data['regionalsales']
+        
+        if record.exists():
+            
+            record.totalsales = totalsales
+            record.internationalsales = internationalsales
+            record.regionalsales = regionalsales
+            
+        else:
+            
+            new = models.Sales(titleid = titleid, totalsales = totalsales, internationalsales=internationalsales, regionalsales = regionalsales)
+            db.session.add(new)
+            
+        db.session.commit()
+        
+        
+    return render_template('sales.html')
 
-@app.route('api/<titleid/activity>',methods=['GET','POST'])
+@app.route('/<titleid>/publishing')
+def publishing(titleid):
+    """Render the website's publishing info"""
+    
+    record = models.Publishing.query.filter_by(titleid==titleid).first()
+        
+
+    if request.method == "POST":
+        """Get data"""
+        data = request.form
+        isbn = data['isbn']
+        width = data['width']
+        height = data['height']
+        pagecount = data['pagecount']
+        pubdate = data['pubdate']
+        
+        if record.exists():
+            
+            record.isbn = isbn
+            record.width = width
+            record.height = height
+            record.pagecount = pagecount
+            record.pubdate = pubdate
+            
+        else:
+            
+            new = models.Publishing(titleid=titleid,isbn=isbn,width=width,height=height,pagecount=pagecount,pubdate=pubdate)
+            db.session.add(new)
+            
+        db.session.commit()
+            
+    return render_template('publishing.html')   
+
+@app.route('api/<titleid>/activity  ',methods=['GET','POST'])
 def activitylist(titleid):
     
     if request.method == 'GET':
@@ -311,19 +368,19 @@ def activitylist(titleid):
         return jsonify(out)
         
 @app.route('api/<titleid>/activity/new',methods=['POST'])
-newActivity(titleid):
+def newActivity(titleid):
     
-    if request.method = 'POST':
+    if request.method == 'POST':
         
         criteria = request.get_json(force=True)
         stage = criteria['stage']
         
         data = criteria['data']
         
-        phase = models.Phase.query.join(models.Has,models.Phase.phaseid==models.Has.phaseid).filter_by(models.Has.titleid = titleid, models.Phase.stage == stage).first()
+        phase = models.Phase.query.join(models.Has,models.Phase.phaseid==models.Has.phaseid).filter_by(models.Has.titleid == titleid, models.Phase.stage == stage).first()
         
-        actid = genId()
-        name = date['name']
+        actid = genID()
+        name = data['name']
         startdate = data['startdate']
         duration = data['duration']
         completed = False
@@ -333,8 +390,7 @@ newActivity(titleid):
             endtime = data['endtime']
             venue = data['venue']
             
-            activity = models.Event(activityid=actid,name=name,startdate=startate,duration=duration,competed=completed,startdate=starttime,endtime=endtime,venue=venue)
-            
+            activity = models.Event(activityid=actid,name=name,startdate=startdate,duration=duration,completed=completed,starttime=starttime,endtime=endtime,venue=venue)
         
         else:
             
@@ -350,6 +406,39 @@ newActivity(titleid):
         out = {'error':None, 'data':[], 'message':'Success'}
         
         return jsonify(out)
+        
+'''ACTIVITY MANAGEMENT'''
+
+@app.route('/<activityid>',methods=['GET','POST'])
+def activity(activityid):
+    """Render the website's activity page."""
+    
+    record = models.Activity.query.filter_by(activityid==activityid).first()
+    event = models.Activity.query.filter_by(activityid==activityid).first()
+    if request.method == "POST":
+        """Get data"""
+        data = request.form
+        name = data['name']
+        statdate = data['startdate']
+        duration = data['duration']
+        completed = data['completed']
+        
+        if record.exists():
+            record.name = name
+            record.statdate = statdate
+            record.duration = duraion
+            record.completed = completed
+        
+        if event.exists():
+            
+            event.starttime = data['starttime']
+            event.endtime = data['endtime']
+            event.venue = data['endtime']
+        
+    if event.exists():
+        return render_template('event.html')
+    else:
+        return render_template('activity.html')
 
 @app.route('api/<activityid>',methods = ['GET','POST'])
 def activityinfo(activityid):
@@ -379,17 +468,18 @@ def resourcelist(activityid):
     if request.method == 'GET':
         data = []
         
-        for resource in reslist:
+        for resource in resList:
+            
             human = models.HumanResource.query.filter_by(resourceid==resource.resourceid).first()
             
             if human.query.exists():
                 
-                data.append({'name'=human.name, 'duration'=human.duration, 'rate'=human.rate})
+                data.append({'name':human.name, 'duration':human.duration, 'rate':human.rate})
             
             else:
                 
                 material = models.MaterialResource.query.filter_by(resourceid==resource.resourceid).first()
-                data.append({'name'=material.name,'qty'=material.qty, 'unitcost'=material.unitcost})
+                data.append({'name':material.name,'qty':material.qty, 'unitcost':material.unitcost})
         
         out = {'error':None, 'data':data, 'message':'Success'}
         
@@ -425,6 +515,58 @@ def addResource(activityid):
         out = {'error':None, 'data':{}, 'message':'Success'}
         
         return jsonify(out)
+        
+'''FILE MANAGEMENT'''
+        
+@app.route('api/<titleid>/files', methods=['GET'])
+@login_required
+def files(titleid):
+    
+    return redirect('file://'+app.config["SERVER_NAME"]+'/'+app.config['UPLOAD_FOLDER']+'/'+titleid)
+        
+@app.route('<titleid>/files/add', methods=['GET','POST'])
+def addfile(titleid):
+    current = models.Phase.query.join(models.Has, models.Phase.phaseid == models.Has.phaseid).add_columns(models.Phase.phaseid).filter_by(models.Has.titleid == titleid,models.Phase.current == True).all()
+    owns = models.Owns.query.filter_by(userid==current_user.userid).exists()
+    
+    file_folder = app.config['UPLOAD_FOLDER']
+    
+    if request.method == 'POST' and owns:
+        
+        data = request.get_jdon(force=True)
+        name = data['name']
+        version = data['version']
+        
+        file = request.files['file']
+        filename = secure_filename(name+'_'+verrsion)
+        file.save(os.path.join(file_folder+'/'+titleid, filename))
+        
+    return render_template('submitfile.html')
+    
+@app.route('api/<titleid>/files/<file>/delete',methods=['DELETE'])
+def deletefile(titleid,file):
+    current = models.Phase.query.join(models.Has, models.Phase.phaseid == models.Has.phaseid).add_columns(models.Phase.phaseid).filter_by(models.Has.titleid == titleid,models.Phase.current == True).all()
+    owns = models.Owns.query.filter_by(userid==current_user.userid, phaseid==current.phaseid).exists()
+    
+    if request.method == 'DELETE' and owns and current_user.role in ['GeneralManager','LeadEditor']:
+        
+        path  = app.config['UPLOAD_FOLDER']+'/'+titleid+'/'+file
+        os.remove(path)
+        
+        out = {'error':None, 'data':{}, 'message':'Success'}
+        
+        return jsonify(out)
+        
+        
+@app.route('api/<titleid>/<file>',methods=['GET'])
+def download(titleid,file):
+    
+    if request.method  == 'GET':
+        
+        uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
+        return send_from_directory(directory=uploads, filename=file)
+        
+
 ###
 # The functions below should be applicable to all Flask apps.
 ###
