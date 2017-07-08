@@ -4,6 +4,9 @@ from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
+app.config['UPLOAD_FOLDER'] = 'app/static/titles'
+app.config['SECRET_KEY'] = 'gtBuR8C9H5JAjWkOKZgW'
+
 app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://postgres:password@localhost/titlemanagementsystem"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True # added just to suppress a warning
 

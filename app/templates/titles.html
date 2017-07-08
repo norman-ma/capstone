@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block main %}
+<h2> Titles</h2>
+<table>
+    <tr>
+        <th>Title</th>
+        <th>Subtitle</th>
+        <th>Status</th>
+    </tr>
+    {% for title in result %}
+        <th>{{ title.title }}</th>
+        <th>{{ title.subtitle }}</th>
+        <th>{{ title.status }}</th>
+    {% endfor %}
+</table>
+{% if result == [] %}
+<p>No results found</p>
+{% endif %}
+
+
+{% endblock %}
