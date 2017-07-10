@@ -2,6 +2,17 @@
 
 {% block main %}
 <h2> New User</h2><div>
+    
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <ul class=flashes>
+    {% for message in messages %}
+        <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+    {% endif %}
+{% endwith %}
+    
 <form method="POST" enctype="multipart/form-data">
     <div class="form-group">
          <br>
@@ -13,13 +24,13 @@
     </div>
     <div class="form-group">
        Role <select name="role">
-                <option value="Gmanager">General manager</option>
-                <option value="Fmanager">Finance Manager</option>
-                <option value="mmanager">Marketing Manager</option>
-                <option value="mmanager">Marketing Officer</option>
-                <option value="editor_in_chief">Editor in Chief</option>
-                <option value="accountant">Accountant</option>
-                <option value="pubassistant">Publishing Assistant</option>
+                <option value="GeneralManager">General manager</option>
+                <option value="FinanceManager">Finance Manager</option>
+                <option value="MarketingManager">Marketing Manager</option>
+                <option value="MarketingOfficer">Marketing Officer</option>
+                <option value="HeadEditor">Editor in Chief</option>
+                <option value="Accountant">Accountant</option>
+                <option value="PublishingAssistant">Publishing Assistant</option>
             </select> </div>
     <div class="form-group">
      <br>

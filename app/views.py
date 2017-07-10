@@ -6,7 +6,7 @@ This file creates your application.
 """
 
 import os
-import time
+import datetime
 from app import app,db,login_manager,models
 from flask import render_template, request, redirect, url_for, flash, jsonify, make_response, current_app, send_from_directory
 from flask_login import login_user, logout_user, current_user, login_required
@@ -18,6 +18,7 @@ import json
 import requests
 from passlib.hash import pbkdf2_sha512
 import smtplib
+import base64
 
 
 ###
@@ -40,8 +41,8 @@ def genID():
     
 def send_email(to_name, to_addr, subj, msg):
     
-    from_name = current_user.name 
-    from_addr = 'thewishlyco@gmail.com'
+    from_name = 'noreply@titlemanagementsystem.com'
+    from_addr = 'noreply@titlemanagementsystem.com'
     # Credentials
     username = 'thewishlyco@gmail.com'
     password = 'xzhhkglidexavsuf'
@@ -77,10 +78,10 @@ def send_email(to_name, to_addr, subj, msg):
 def home():
     """Render website's home page."""
     
-    if not current_user.authenticated:        
+    if not current_user.is_authenticated:        
         return render_template('home.html')
     elif current_user.role == 'GeneralManager':
-        return render_template('genManager.html')
+        return render_template('general.html')
     elif current_user.role in ['LeadEditor','Publishing Assistant']:
         return render_template('editor.html')
     elif current_user.role in ['FinancialManager','Accountant']:
@@ -117,12 +118,12 @@ def login():
         username = data["username"]
         auth = models.Authentication.query.filter_by(username=username).first()
     
-        if not db.session.query(db.exists().where(models.Authentication.username==username)):
+        if not db.session.query(db.exists().where(models.Authentication.username==username)).scalar():
             flash("Username or Password is incorrect.")
             
         elif verify(auth,data['password']):
             user = models.Users.query.filter_by(userid=auth.userid).first()  
-            login_user(user)
+            login_user(user,False)
             return redirect(url_for('home'))
                
         else:
@@ -134,7 +135,8 @@ def login():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('home'))
+    return render_template("home.html")
+
 
 '''USER MANAGEMENT'''
     
@@ -155,37 +157,48 @@ def newuser():
         user = models.Users(userid=uid,firstname=fname,lastname=lname,role=role,email=email)
         db.create_all()
         db.session.add(user)
-        db.session.commit()
         
         """Send registration email"""
         
         to_name = fname + " " + lname
         to_addr = email
-        link = app.config['SERVER_NAME']+'/user/register/'+uid
+        link = request.url_root+'user/register/'+str(uid)
         
         msg = """ Dear {},\n Please follow the following link to complete user registration:\n {} \n Regards, \n TitleMangementSystem """.format(to_name,link)
         subj = "Complete TitleManagementSystem User Registration"
         
-        send_email(to_name,to_addr,subj,msg)
+        if send_email(to_name,to_addr,subj,msg):
+             db.session.commit()
+        else:
+            flash('There was an error, please try again')
         
     return render_template("newuser.html")
         
 @app.route('/user/register/<userid>',methods=['GET','POST'])
 def register(userid):
+    
     if request.method == "POST":
         """Get data"""
         data = request.form
         uname = data["username"]
         pword = data["password"]
+        confirm = data["cpassword"]
         
-        salt = uuid.uuid4().hex
-        phash = saltedhash(pword,salt)
+        if pword == confirm:
         
-        """Create Authentication Profile"""
-        auth = models.Authentication(userid=userid,hash=phash,salt=salt)
-        db.create_all()
-        db.session.add(auth)
-        db.session.commit()
+            salt = uuid.uuid4().hex
+            phash = saltedhash(pword,salt)
+            
+            """Create Authentication Profile"""
+            auth = models.Authentication(userid=userid,username=uname,hash=phash,salt=salt)
+            db.create_all()
+            db.session.add(auth)
+            db.session.commit()
+            
+            return redirect(url_for('login'))
+        
+        else:
+            flash('Passwords must match.')
     
     return render_template("register.html")
 
@@ -201,11 +214,13 @@ def manageusers():
 '''TITLE MANAGEMENT'''
     
 @app.route('/title/new', methods=['POST','GET'])
+@login_required
 def newtitle():
     """Render the website's new title page."""
     folder = app.config['UPLOAD_FOLDER']
     
     if request.method=="POST":
+        
         form = request.form
         title = form['title']
         subtitle = form['subtitle']
@@ -214,18 +229,37 @@ def newtitle():
         
         tid = genID()
         
-        new = models.Title(titleid=tid,title=title,subtitle=subtitle,description=description,status=status)
-        db.create_all()
-        db.session.add(new)
+        newtitle = models.Title(titleid=tid,title=title,subtitle=subtitle,description=description,status=status)
+        db.session.add(newtitle)
         
-        path = folder+'/'+tid
+        authorfname = form['authorfname']
+        authorlname = form['authorlname']
+        
+        if(db.session.query(db.exists().where(db.and_(models.Author.firstname==authorfname, models.Author.lastname==authorlname)))).scalar():
+            aid = models.Author.query.filter_by(firstname=authorfname,lastname=authorlname).first()
+        else:
+            aid = genID()
+            newauth = models.Author(authorid=aid,firstname=authorfname,lastname=authorlname)
+            db.session.add(newauth)
+        
+        by = models.By(titleid=tid, authorid=aid)
+        db.session.add(by)
+        
+        
+        
+        path = folder+'/'+str(tid)
         
         if not os.path.exists(path):
             os.makedirs(path)
-            db.commit()
+            db.session.commit()
+            return redirect(url_for('titleinfo'),tid)
+        else:
+            flash('Title already exists')
+            
     return render_template('newtitle.html')
     
 @app.route('/titles', methods=['GET'])
+@login_required
 def titlelist():
     
     titles = models.Title.query.all()
@@ -240,6 +274,7 @@ def titlelist():
 
         
 @app.route('/title/<titleid>',methods=['POST','GET'])
+@login_required
 def titleinfo(titleid):
     
     title = models.Title.query.filter_by(titleid=titleid).first
@@ -248,7 +283,7 @@ def titleinfo(titleid):
         
         data = request.form
         
-        if title.exists():
+        if db.session.quesry(db.exists().where(models.Tiitle.titleid==titleid)):
             title.title = data['title']
             title.subtitle = data['subtitle']
             title.description = data['description']
@@ -259,36 +294,29 @@ def titleinfo(titleid):
     
     return render_template('title.html',title=title)
 
-@app.route('/api/title/<stage>',methods=['POST','GET'])
-def phaselist(stage):
+@app.route('/api/titles',methods=['POST','GET'])
+@login_required
+def titles():
     
-    if request.method == 'GET':
-        
-        titles = models.Title.query.join(models.Has, models.Phase, models.Title.titleid == models.Has.titleid, models.Phase.phaseid == models.Has.phaseid ).filter_by(models.Phase.stage==stage).all()
-        
-        data = []
-        
-        for title in titles:
-            
-            record = {'title':title.title, 'subttile':title.subtitle,'description':title.description,'status':title.status}
-            data.append(record)
-        
-        out = {'error':None, 'data':data, 'message':'Success'}
-    
-        return jsonify(out)
-        
     if request.method == 'POST':
         
         criteria = request.get_json(force=True)
         status = criteria['status']
-        
+        stage = criteria['stage']
+
         data = []
-        
-        titles = models.Title.query.join(models.Has, models.Phase, models.Title.titleid == models.Has.titleid, models.Phase.phaseid == models.Has.phaseid ).filter_by(models.Phase.stage==stage, models.Title.status==status).all()
+        if stage=='' and status=='':
+            titles = models.Title.query.join(models.Has, models.Title.titleid == models.Has.titleid).join(models.Phase, models.Phase.phaseid == models.Has.phaseid ).all()
+        if stage=='' and status!='':
+            titles = models.Title.query.join(models.Has, models.Title.titleid == models.Has.titleid).join(models.Phase, models.Phase.phaseid == models.Has.phaseid ).filter_by(models.Title.status==status).all()
+        if stage!='' and status=='':
+            titles = models.Title.query.join(models.Has, models.Title.titleid == models.Has.titleid).join(models.Phase, models.Phase.phaseid == models.Has.phaseid ).filter_by(models.Phase.stage==stage).all()
+        else:
+            titles = models.Title.query.join(models.Has, models.Title.titleid == models.Has.titleid).join(models.Phase, models.Phase.phaseid == models.Has.phaseid ).filter_by(models.Phase.stage==stage, models.Title.status==status).all()
         
         for title in titles:
             
-            record = {'title':title.title, 'subttile':title.subtitle,'description':title.description,'status':title.status}
+            record = {'id':title.titleid, 'title':title.title, 'subttile':title.subtitle,'description':title.description,'status':title.status,'stage':title.stage}
             data.append(record)
         
         out = {'error':None, 'data':data, 'message':'Success'}
@@ -296,6 +324,7 @@ def phaselist(stage):
         return jsonify(out)
         
 @app.route('/<titleid>/sales', methods = ['GET','POST'])
+@login_required
 def sales(titleid):
     """Render the website's sales page."""
     
@@ -308,7 +337,7 @@ def sales(titleid):
         internationalsales = data['internationalsales']
         regionalsales = data['regionalsales']
         
-        if record.exists():
+        if db.session.query(db.exists().where(models.Sales.titleid==titleid)):
             
             record.totalsales = totalsales
             record.internationalsales = internationalsales
@@ -325,6 +354,7 @@ def sales(titleid):
     return render_template('sales.html')
 
 @app.route('/<titleid>/publishing')
+@login_required
 def publishing(titleid):
     """Render the website's publishing info"""
     
@@ -340,7 +370,7 @@ def publishing(titleid):
         pagecount = data['pagecount']
         pubdate = data['pubdate']
         
-        if record.exists():
+        if db.session.query(db.exists().where(models.Publishing.titleid==titleid)):
             
             record.isbn = isbn
             record.width = width
@@ -358,6 +388,7 @@ def publishing(titleid):
     return render_template('publishing.html')   
 
 @app.route('/api/<titleid>/activity  ',methods=['GET','POST'])
+@login_required
 def activitylist(titleid):
     
     if request.method == 'GET':
@@ -396,6 +427,7 @@ def activitylist(titleid):
         return jsonify(out)
         
 @app.route('/api/<titleid>/activity/new',methods=['POST'])
+@login_required
 def newActivity(titleid):
     
     if request.method == 'POST':
@@ -438,23 +470,24 @@ def newActivity(titleid):
 '''ACTIVITY MANAGEMENT'''
 
 @app.route('/activity/<activityid>',methods=['GET','POST'])
+@login_required
 def activity(activityid):
     """Render the website's activity page."""
     
     record = models.Activity.query.filter_by(activityid=activityid).first()
-    event = models.Activity.query.filter_by(activityid=activityid).first()
+    event = models.Event.query.filter_by(activityid=activityid).first()
     if request.method == "POST":
         """Get data"""
         data = request.form
         
-        if record.exists():
+        if db.session.query(db.exists().where(models.Activity.activityid==activityid)):
             record.name = data['name']
             record.statdate = data['startdate']
             record.duration = data['duration']
             record.completed = data['completed']
             db.session.add(record)
         
-        if event.exists():
+        if db.session.query(db.exists().where(models.Event.activityid==activityid)):
             
             event.starttime = data['starttime']
             event.endtime = data['endtime']
@@ -463,12 +496,13 @@ def activity(activityid):
             
         db.commit()
         
-    if event.exists():
+    if db.session.query(db.exists().where(models.Event.activityid==activityid)):
         return render_template('event.html', event=event)
     else:
         return render_template('activity.html', activity=activity)
 
 @app.route('/api/<activityid>',methods = ['GET','POST'])
+@login_required
 def activityinfo(activityid):
     
     activity = models.Activity.query.filter_by(activityid = activityid).first()
@@ -477,7 +511,7 @@ def activityinfo(activityid):
         
         event = models.Event.query.filter_by(activityid = activityid).first()
         
-        if event.query.exists():
+        if db.session.query(db.exists().where(models.Event.activityid==activityid)):
             data = {'name':event.name, 'startdate':event.startdate,'duration':event.duration,'completed':event.completed, 'starttime': event.starttime, 'endtime': event.endtime, 'venue': event.venue}
             
         else:
@@ -489,6 +523,7 @@ def activityinfo(activityid):
         return jsonify(out)
         
 @app.route('/api/<activityid>/resources', methods = ['GET','POST'])
+@login_required
 def resourcelist(activityid):
     
     resList = models.Resource.query.join(models.Uses,models.Resource.resourceid==models.Uses.resourceid).filter_by(models.Uses.activityid==activityid).all()
@@ -500,7 +535,7 @@ def resourcelist(activityid):
             
             human = models.HumanResource.query.filter_by(resourceid==resource.resourceid).first()
             
-            if human.query.exists():
+            if db.session.query(db.exists().where(models.HumanResource.resourceid==resourceid)):
                 
                 data.append({'name':human.name, 'duration':human.duration, 'rate':human.rate})
             
@@ -514,6 +549,7 @@ def resourcelist(activityid):
         return jsonify(out)
         
 @app.route('/api/<activityid>/resources/new',methods=['POST'])
+@login_required
 def addResource(activityid):
     
     if request.method == 'POST':
@@ -548,6 +584,7 @@ def addResource(activityid):
         
 @app.route('/api/<titleid>/files', methods=['GET'])
 @login_required
+@login_required
 def files(titleid):
     
     #return redirect('file://'+app.config["SERVER_NAME"]+'/'+app.config['UPLOAD_FOLDER']+'/'+titleid)
@@ -555,9 +592,10 @@ def files(titleid):
     return redirect(static_folder)
         
 @app.route('/<titleid>/files/add', methods=['GET','POST'])
+@login_required
 def addfile(titleid):
-    current = models.Phase.query.join(models.Has, models.Phase.phaseid == models.Has.phaseid).add_columns(models.Phase.phaseid).filter_by(models.Has.titleid == titleid,models.Phase.current == True).all()
-    owns = models.Owns.query.filter_by(userid==current_user.userid).exists()
+    current = models.Phase.query.join(models.Has, models.Phase.phaseid == models.Has.phaseid).add_columns(models.Phase.phaseid).filter_by(models.Has.titleid == titleid,models.Phase.current == True).first
+    owns = db.session.query(db.exists().where(models.Owns.userid==current_user.userid,models.Owns.phaseid==current.phaseid))
     
     file_folder = app.config['UPLOAD_FOLDER']
     
@@ -574,9 +612,10 @@ def addfile(titleid):
     return render_template('submitfile.html')
     
 @app.route('/api/<titleid>/files/<file>/delete',methods=['DELETE'])
+@login_required
 def deletefile(titleid,file):
-    current = models.Phase.query.join(models.Has, models.Phase.phaseid == models.Has.phaseid).add_columns(models.Phase.phaseid).filter_by(models.Has.titleid == titleid,models.Phase.current == True).all()
-    owns = models.Owns.query.filter_by(userid==current_user.userid, phaseid==current.phaseid).exists()
+    current = models.Phase.query.join(models.Has, models.Phase.phaseid == models.Has.phaseid).add_columns(models.Phase.phaseid).filter_by(models.Has.titleid == titleid,models.Phase.current == True).first
+    owns = db.session.query(db.exists().where(models.Owns.userid==current_user.userid,models.Owns.phaseid==current.phaseid))
     
     if request.method == 'DELETE' and owns and current_user.role in ['GeneralManager','LeadEditor']:
         
@@ -589,6 +628,7 @@ def deletefile(titleid,file):
         
         
 @app.route('/api/<titleid>/<file>',methods=['GET'])
+@login_required
 def download(titleid,file):
     
     if request.method  == 'GET':

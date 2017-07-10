@@ -4,8 +4,18 @@
 <h1 class="page-header">New Title</h1>
 <p class="lead"> Title details</p>
 
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <ul class=flashes>
+    {% for message in messages %}
+        <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+
   <div class="Profile-form">
-    <form name= "newproject" action="{{ url_for('newtitle') }}" method="POST" enctype="multipart/form-data">
+    <form name= "newproject" method="POST"s>
         <div class="form-group">
             <input type="text" name="title" placeholder="Full Title" ng-model="title"/> 
         </div>
@@ -16,11 +26,10 @@
             <textarea name="description" placeholder="Description" rows="10" cols="30" ng-model="desc"></textarea>
         </div>
         <div class="form-group">
-            <input type="text" name="authorF" placeholder="Author First Name" ng-model="authorF"/> 
+            <input type="text" name="authorfname" placeholder="Author First Name" ng-model="authorF"/> 
         </div>
-        
         <div class="form-group">
-            <input  type="text" name="authorL" placeholder="Author Last Name" ng-model="authorL"/> 
+            <input  type="text" name="authorlname" placeholder="Author Last Name" ng-model="authorL"/> 
         </div>
         <button id="newTitle" type="submit" name="submit">Submit</button>
     </form>
