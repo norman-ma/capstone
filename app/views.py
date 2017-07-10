@@ -245,14 +245,26 @@ def newtitle():
         by = models.By(titleid=tid, authorid=aid)
         db.session.add(by)
         
-        
+        phase1 = models.Phase(phaseid=genID(),budget=0,stage='Acquisition',current=True)
+        has1 = models.Has(titleid=tid,phaseid=phase1.phaseid)
+        db.session.add(phase1)
+        db.session.add(has1)
+        phase2 = models.Phase(phaseid=genID(),budget=0,stage='EditorialProduction',current=False)
+        has2 = models.Has(titleid=tid,phaseid=phase2.phaseid)
+        db.session.add(phase2)
+        db.session.add(has2)
+        phase3 = models.Phase(phaseid=genID(),budget=0,stage='SalesMarketing',current=False)
+        db.session.add(phase1)
+        has3 = models.Has(titleid=tid,phaseid=phase3.phaseid)
+        db.session.add(phase3)
+        db.session.add(has3)
         
         path = folder+'/'+str(tid)
         
         if not os.path.exists(path):
             os.makedirs(path)
             db.session.commit()
-            return redirect(url_for('titleinfo'),tid)
+            return redirect(url_for('titleinfo'),titleid=tid)
         else:
             flash('Title already exists')
             
