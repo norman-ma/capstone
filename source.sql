@@ -1,2 +1,16 @@
-insert into users values(2343243,'Michael-Anthony', 'Norman', 'GeneralManager', 'mikexcelsior@gmail.com');
-insert into authentication values(2343243, 'mnorman','$pbkdf2-sha512$25000$DsGYE2KslfJ.r9W6V6p17g$t5yuTI51TTJHoZRq63lDjnTLww1bPYL0WIjREoBcEXdiC29093ZtaVjfExCahJqC8ri8aGJaX9HWrE2tWImQ8Q',827837)
+insert into Category(categoryid,name) values(0,'New and Forthcoming');
+insert into Category(categoryid,name) values(1,'Bestsellers & Award Winners');
+insert into Category(categoryid,name) values(2,'Biography/Memoirs');
+insert into Category(categoryid,name) values(4,'Caribbean History');
+insert into Category(categoryid,name) values(5,'Caribbean Linguistics');
+insert into Category(categoryid,name) values(6,'Caribbean Literature');
+insert into Category(categoryid,name) values(7,'Economics');
+insert into Category(categoryid,name) values(8,'Education');
+insert into Category(categoryid,name) values(9,'Environmental Studies');
+insert into Category(categoryid,name) values(10,'Gender Studies');
+insert into Category(categoryid,name) values(11,'General Interest');
+insert into Category(categoryid,name) values(12,'Legal Studies');
+insert into Category(categoryid,name) values(13,'Medical Studies');
+insert into Category(categoryid,name) values(14,'Political Science');
+insert into Category(categoryid,name) values(15,'Psychology');
+insert into Category(categoryid,name) values(16,'Sociology');

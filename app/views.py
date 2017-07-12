@@ -7,8 +7,9 @@ This file creates your application.
 
 import os
 import datetime
+import sys
 from app import app,db,login_manager,models
-from flask import render_template, request, redirect, url_for, flash, jsonify, make_response, current_app, send_from_directory
+from flask import render_template, request, redirect, url_for, flash, jsonify, make_response, current_app, send_from_directory,abort
 from flask_login import login_user, logout_user, current_user, login_required
 from random import randint
 from werkzeug.utils import secure_filename
@@ -74,13 +75,16 @@ def send_email(to_name, to_addr, subj, msg):
 # Routing for your application.
 #
 
-@app.route('/')
+@app.route('/', methods = ['GET'])
 def home():
     """Render website's home page."""
-    
-    if not current_user.is_authenticated:        
-        return render_template('home.html')
-    elif current_user.role == 'GeneralManager':
+    return render_template('home.html')
+        
+
+@app.route('/home',methods=['GET'])
+@login_required
+def user():
+    if current_user.role == 'GeneralManager':
         return render_template('general.html')
     elif current_user.role in ['LeadEditor','Publishing Assistant']:
         return render_template('editor.html')
@@ -88,8 +92,6 @@ def home():
         return render_template('finance.html')
     elif current_user.role == 'MarketingManager':
         return render_template('marketing.html')
-    else:
-        return render_template('home.html')
     
 @app.route('/search',methods=['GET'])
 def search():
@@ -123,9 +125,8 @@ def login():
             
         elif verify(auth,data['password']):
             user = models.Users.query.filter_by(userid=auth.userid).first()  
-            login_user(user,False)
-            return redirect(url_for('home'))
-               
+            login_user(user,remember = False)
+            return redirect(url_for('user'))
         else:
             flash("Username or Password is incorrect.")
         
@@ -135,8 +136,7 @@ def login():
 @login_required
 def logout():
     logout_user()
-    return render_template("home.html")
-
+    return redirect(url_for('home'))
 
 '''USER MANAGEMENT'''
     
@@ -203,6 +203,7 @@ def register(userid):
     return render_template("register.html")
 
 @app.route('/users/manage',methods=['GET','POST'])
+@login_required
 def manageusers():
     if request.method == "POST":
         """Get data"""
@@ -225,6 +226,7 @@ def newtitle():
         title = form['title']
         subtitle = form['subtitle']
         description = form['description']
+        category = int(form['category'])
         status = 'IN PROGRESS'
         
         tid = genID()
@@ -259,6 +261,12 @@ def newtitle():
         db.session.add(phase3)
         db.session.add(has3)
         
+        sales = models.Sales(titleid=tid,localsales=0,regionalsales=0,internationalsales=0)
+        db.session.add(sales)
+        
+        belongs_to = models.Belongs_to(titleid=tid,categoryid=category)
+        db.session.add(belongs_to)
+        
         path = folder+'/'+str(tid)
         
         if not os.path.exists(path):
@@ -279,32 +287,42 @@ def titlelist():
     tlist = []
     if request.method == 'GET':
         for t in titles:
-            tlist.append({'title':t.title,'subtitle':t.subtitle,'status':t.status})
+            tlist.append({'id':t.titleid, 'title':t.title,'subtitle':t.subtitle,'status':t.status})
     
     return render_template('titles.html',result=tlist)
-    
-
         
 @app.route('/title/<titleid>',methods=['POST','GET'])
 @login_required
 def titleinfo(titleid):
     
-    title = models.Title.query.filter_by(titleid=titleid).first
-
+    if not db.session.query(db.exists().where(models.Title.titleid==titleid)).scalar():
+        abort(404)
+    
+    title = db.session.query(models.Title, models.By, models.Author, models.Belongs_to, models.Category).join(models.By, models.Title.titleid == models.By.titleid).join(models.Author, models.Author.authorid == models.By.authorid).join(models.Belongs_to, models.Belongs_to.titleid == models.Title.titleid).join(models.Category,models.Category.categoryid == models.Belongs_to.categoryid).filter(models.Title.titleid == titleid).first()
+    
+    if db.session.query(db.exists().where(models.Publishing.titleid == titleid)).scalar():  
+        pub = models.Publishing.query.filter_by(titleid=titleid).first()
+    else:
+        pub = None
+    if db.session.query(db.exists().where(models.Sales.titleid == titleid)).scalar():
+        sales = models.Sales.query.filter_by(titleid=titleid).first()
+    else:
+        sales = None
+        
     if request.method == 'POST':
         
         data = request.form
         
-        if db.session.quesry(db.exists().where(models.Tiitle.titleid==titleid)):
-            title.title = data['title']
-            title.subtitle = data['subtitle']
-            title.description = data['description']
-            title.status = data['status']
+        if db.session.query(db.exists().where(models.Title.titleid==titleid)).scalar():
+            title.Title.title = data['title']
+            title.Title.subtitle = data['subtitle']
+            title.Title.description = data['description']
+            title.Title.status = data['status']
             
             db.session.add(title)
             db.session.commit()
     
-    return render_template('title.html',title=title)
+    return render_template('title.html',title=title, pub=pub,sales=sales)
 
 @app.route('/api/titles',methods=['POST','GET'])
 @login_required
@@ -313,22 +331,23 @@ def titles():
     if request.method == 'POST':
         
         criteria = request.get_json(force=True)
-        status = criteria['status']
+        state = criteria['state']
         stage = criteria['stage']
 
         data = []
-        if stage=='' and status=='':
-            titles = models.Title.query.join(models.Has, models.Title.titleid == models.Has.titleid).join(models.Phase, models.Phase.phaseid == models.Has.phaseid ).all()
-        if stage=='' and status!='':
-            titles = models.Title.query.join(models.Has, models.Title.titleid == models.Has.titleid).join(models.Phase, models.Phase.phaseid == models.Has.phaseid ).filter_by(models.Title.status==status).all()
-        if stage!='' and status=='':
-            titles = models.Title.query.join(models.Has, models.Title.titleid == models.Has.titleid).join(models.Phase, models.Phase.phaseid == models.Has.phaseid ).filter_by(models.Phase.stage==stage).all()
+        if stage=='' and state=='':
+            titles = db.session.query(models.Title,models.Has,models.Phase).join(models.Has, models.Has.titleid == models.Title.titleid).join(models.Phase, models.Has.phaseid == models.Phase.phaseid).filter(models.Phase.current == True).all()
+        elif stage=='' and state!='':
+            titles = db.session.query(models.Title,models.Has,models.Phase).join(models.Has, models.Has.titleid == models.Title.titleid).join(models.Phase, models.Has.phaseid == models.Phase.phaseid).filter(models.Title.status == state,models.Phase.current == True).all()
+        elif stage!='' and state=='':
+            titles = db.session.query(models.Title,models.Has,models.Phase).join(models.Has, models.Has.titleid == models.Title.titleid).join(models.Phase, models.Has.phaseid == models.Phase.phaseid).filter(models.Phase.stage == stage,models.Phase.current == True).all()
         else:
-            titles = models.Title.query.join(models.Has, models.Title.titleid == models.Has.titleid).join(models.Phase, models.Phase.phaseid == models.Has.phaseid ).filter_by(models.Phase.stage==stage, models.Title.status==status).all()
+            titles = db.session.query(models.Title,models.Has,models.Phase).join(models.Has, models.Has.titleid == models.Title.titleid).join(models.Phase, models.Has.phaseid == models.Phase.phaseid).filter(models.Phase.stage == stage, models.Title.status == state,models.Phase.current == True).all()
         
         for title in titles:
             
-            record = {'id':title.titleid, 'title':title.title, 'subttile':title.subtitle,'description':title.description,'status':title.status,'stage':title.stage}
+            record = {'id':title.Title.titleid, 'title':title.Title.title, 'subtitle':title.Title.subtitle,'description':title.Title.description,'status':title.Title.status,'stage':title.Phase.stage}
+            print (record,sys.stderr)
             data.append(record)
         
         out = {'error':None, 'data':data, 'message':'Success'}
@@ -655,7 +674,10 @@ def download(titleid,file):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return  models.Users.query.filter_by(userid=user_id).first()
+    if db.session.query(db.exists().where(models.Users.userid == user_id)).scalar():
+        return  models.Users.query.filter_by(userid=user_id).first()
+    else:
+        return None
 
 @app.route('/<file_name>.txt')
 def send_text_file(file_name):

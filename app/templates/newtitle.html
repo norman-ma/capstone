@@ -15,12 +15,34 @@
     {% endwith %}
 
   <div class="Profile-form">
-    <form name= "newproject" method="POST"s>
+    <form name= "newproject" action = "{{ url_for('newtitle') }}" method="POST">
         <div class="form-group">
             <input type="text" name="title" placeholder="Full Title" ng-model="title"/> 
         </div>
         <div class="form-group">
             <input type="text" name="subtitle" placeholder="Sub Title" ng-model="subtitle"/> 
+        </div>
+        <div class="form-group">
+             Category <select name="Category">
+                <option value="0">New and Forthcoming</option>
+                <option value="1">Bestsellers & Award Winners</option>
+                <option value="2">Biography/Memoirs</option>
+                <option value="3">Caribbean Cultural Studies</option>
+                <option value="4">Caribbean History</option>
+                <option value="5">Caribbean Linguistics</option>
+                <option value="6">Caribbean Literature</option>
+                <option value="5">Economics</option>
+                <option value="7">Education</option>
+                <option value="8">Environmental Studiest</option>
+                <option value="9">Gender Studies</option>
+                <option value="10">Gender Studies</option>
+                <option value="11">General Interest</option>
+                <option value="12">Legal Studies</option>
+                <option value="13">Medical Studies</option>
+                <option value="14">Political Science</option>
+                <option value="15">Psychology</option>
+                <option value="16">Sociology</option>
+            </select> </div>
         </div>
         <div class="form-group">
             <textarea name="description" placeholder="Description" rows="10" cols="30" ng-model="desc"></textarea>

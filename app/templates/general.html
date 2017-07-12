@@ -2,20 +2,26 @@
 
 {% block main %}
 
-<div>
+<div ng-controller = "InProgressController">
     <h3>Titles In Progress</h3>
-    <table class="table table-hover">
+    <table class="table table-hover"  ng-init = "get('GeneralManager')">
         <tr>
             <th>Title</th>
             <th>Subtitle</th>
             <th>Status</th>
             <th>Stage</th>
         </tr>
-    </table>
+        <tr ng-repeat = "t in titles" ng-click = "go(t.id)">
+            <td>/# t.title #/</td>
+            <td>/# t.subtitle #/</td>
+            <td>/# t.status #/</td>
+            <td>/# t.stage #/</td>
+        </tr>
+    </table>        
 </div>
 
 <div>
-    <a href="{{ url_for('newtitle') }}"><button type='button' class="btn btn-default btn-circle">+</button> New Title</a>
+    <a href="{{ url_for('newtitle') }}"><button type='button rounded-circle' class="btn btn-default btn-circle">+</button> New Title</a>
 </div>
 
 {% endblock %}

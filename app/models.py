@@ -26,7 +26,7 @@ class Users(db.Model):
             return str(self.userid)  # python 3 support
 
     def __repr__(self):
-        return '<Users %r>' % (self.name)
+        return '<Users %r>' % (self.firstname)
 
 class Authentication(db.Model):
     __table_args__ = {'extend_existing': True} 

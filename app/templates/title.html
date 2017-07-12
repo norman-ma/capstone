@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block main %}
+<div>
+    <h1> {{ title.Title.title }}</h1>
+    <h4><em> {{ title.Title.subtitle }} </em><br/>{{ title.Author.lastname }}, {{ title.Author.firstname }}</h4>
+    <p>Category: {{ title.Category.name }}</p>
+    <div>
+        <p>{{ title.Title.description }}</p>
+    </div>
+</div>
+{% if pub != None %}
+<div>
+    <h3>Publishing Data</h3>
+    <table class="table table-hover">
+        <tr>
+            <th>ISBN</th>
+            <th>Dimensions</th>
+            <th>Page Count</th>
+            <th>Publication Date</th>
+        </tr>
+        <tr>
+            <td>{{ pub.isbn }}</td>
+            <td>{{ pub.width }} x {{ pub.height }}</td>
+            <td>{{ pub.pagecount }}</td>
+            <td>{{ pub.pubdate }}</td>
+            
+        </tr>
+    </table>>
+</div>
+{% else %}
+<div>
+    <p>Awaiting Publishing Data</p>
+</div>
+{% endif %}
+
+{% if sales != None %}
+<div>
+    <h4>Sales Data</h4>
+    <table class="table table-hover">
+        <tr>
+            <th>Local Sales</th>
+            <th>Regional Sales</th>
+            <th>International Sales</th>
+            <th>Total Sales</th>
+        </tr>
+        <tr>
+            <td>${{ sales.localsales }}</td>
+            <td>${{ sales.regionalsales }}</td>
+            <td>${{ sales.internationalsales }}</td>
+            <td><strong>${{ sales.totalsales }}</strong></td>
+        </tr>
+    </table>
+</div>
+{% else %}
+<div>
+    <p>Awaiting Sales Data</p>
+</div>
+{% endif %}
+
+{% endblock %}
