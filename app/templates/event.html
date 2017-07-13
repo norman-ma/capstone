@@ -1,23 +1,55 @@
 {% extends "base.html" %}
 
 {% block main %}
-<form method="POST" enctype="multipart/form-data">
+<div>
+    <h1>Event Details</h1>
+    <h3>{{ event.name }}</h3>
+    
+    <p>Starting: {{ event.startdate.date() }} and continuing for {{ event.duration }} day(s)<br/>{{ event.starttime }} - {{ event.endtime }}<br/>Venue: {{ event.venue }}</p>
+    
+   
+</div>
+<div>
+    <h3>Human Resources</h3>
+    <table class="table table-hover">
+        <tr>
+            <th>Name</th>
+            <th>Rate</th>
+            <th>Duration</th>
+            <th>Total Cost</th>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <form class='btn-form' action="{{ url_for('newresource',activityid=event.activityid) }}">
+        <input type="submit" value="+" class="btn btn-circle"/>Add Resource
+    </form>
+</div>
 
-     <div class="form-group">
-         <br>
-       <input type="text" name="startTime" placeholder="Start Time"/> 
-      </div>
-     <div class="form-group">
-     <br>
-       <input type="text" name="endTime" placeholder="End Time"/> 
-      </div>
-     <div class="form-group">
-     <br>
-       <input type="text" name="venue" placeholder="Venue"/> 
-      </div>
-
-      <button type="submit" name="submit" >Submit</button>
-</form>
+<div>
+    <h3>Material Resources</h3>
+    <table class="table table-hover">
+        <tr>
+            <th>Name</th>
+            <th>Unit Cost</th>
+            <th>Quantity</th>
+            <th>Total Cost</th>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <form class='btn-form' action="{{ url_for('newresource',activityid=event.activityid) }}">
+        <input type="submit" value="+" class="btn btn-circle"/> Add Resource
+    </form>
+</div>
 
 
 {% endblock %}

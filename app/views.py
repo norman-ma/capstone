@@ -418,57 +418,53 @@ def publishing(titleid):
             
     return render_template('publishing.html')   
 
-@app.route('/api/<titleid>/activity  ',methods=['GET','POST'])
+@app.route('/api/<titleid>/activity',methods=['GET','POST'])
 @login_required
 def activitylist(titleid):
     
-    if request.method == 'GET':
-        
-        phaselist = models.Phase.query.join(models.Has, models.Phase.phaseid == models.Has.phaseid).add_columns(models.Phase.phaseid).filter_by(models.Has.titleid == titleid).all()
-        actlist = models.Activity.query.join(models.Consists_Of, models.Activity.activityid == models.Consists_Of.activityid).filter_by(models.Has.phaseid in phaselist).all()
-        
-        data = []
-        
-        for activity in actlist:
-            
-            record = {'name':activity.name, 'startdate':activity.startdate,'duration':activity.duration,'completed':activity.completed}
-            data.append(record)
-        
-        out = {'error':None, 'data':data, 'message':'Success'}
-        
-        return jsonify(out)
-        
     if request.method == 'POST':
         
-        criteria = request.get_json(force=True)
-        showcomplete = criteria['showCompleted']
+        data = request.get_json(force=True)
+        complete = data['complete']
+        current = data['current']
         
-        phaselist = models.Phase.query.join(models.Has, models.Phase.phaseid == models.Has.phaseid).add_columns(models.Phase.phaseid).filter_by(models.Has.titleid == titleid).all()
-        actlist = models.Activity.query.join(models.Consists_Of, models.Activity.activityid == models.Consists_Of.activityid).filter_by(models.Has.phaseid in phaselist, models.Activity.completed == showcomplete).all()
+        query = db.session.query(models.Title, models.Has, models.Phase, models.Consists_Of,models.Activity).join(models.Has,models.Title.titleid == models.Has.titleid).join(models.Phase,models.Phase.phaseid == models.Has.phaseid).join(models.Consists_Of,models.Consists_Of.phaseid == models.Phase.phaseid).join(models.Activity,models.Activity.activityid == models.Consists_Of.activityid).filter(models.Title.titleid == titleid)
+        
+        if complete and current:
+            actlist = query.filter(models.Activity.completed == complete, models.Phase.current == True).all()
+        elif complete:
+            actlist = query.filter(models.Activity.completed == complete).all()
+        elif current:
+            actlist = query.filter(models.Activity.completed == complete, models.Phase.current == True).all()
+        else:
+            actlist = query.all()
         
         data = []
         
         for activity in actlist:
             
-            record = {'name':activity.name, 'startdate':activity.startdate,'duration':activity.duration,'completed':activity.completed}
+            total = activitytotal(activity.Activity.activityid)
+            allocation = activityallocation(activity.Activity.activityid,total)
+            
+            record = {'id':activity.Activity.activityid, 'name':activity.Activity.name, 'startdate':activity.Activity.startdate.date().strftime("%a, %B %d, %Y"),'duration':activity.Activity.duration,'completed':activity.Activity.completed, 'total':total, 'allocation':allocation}
+            
             data.append(record)
         
         out = {'error':None, 'data':data, 'message':'Success'}
         
         return jsonify(out)
         
-@app.route('/api/<titleid>/activity/new',methods=['POST'])
+@app.route('/<titleid>/activity/new',methods=['GET','POST'])
 @login_required
-def newActivity(titleid):
+def newactivity(titleid):
     
     if request.method == 'POST':
         
-        criteria = request.get_json(force=True)
-        stage = criteria['stage']
+        data = request.form
         
-        data = criteria['data']
+        print (data,sys.stderr)
         
-        phase = models.Phase.query.join(models.Has,models.Phase.phaseid==models.Has.phaseid).filter_by(models.Has.titleid == titleid, models.Phase.stage == stage).first()
+        phase = db.session.query(models.Phase,models.Has).join(models.Has, models.Phase.phaseid == models.Has.phaseid).filter(models.Has.titleid == titleid, models.Phase.current == True).first()
         
         actid = genID()
         name = data['name']
@@ -476,7 +472,8 @@ def newActivity(titleid):
         duration = data['duration']
         completed = False
         
-        if criteria['isEvent'] == 'True':
+        if 'starttime' in data:
+            
             starttime = data['starttime']
             endtime = data['endtime']
             venue = data['venue']
@@ -485,38 +482,146 @@ def newActivity(titleid):
         
         else:
             
-            activity = models.Activity(activityid=actid,name=name,startdate=startate,duration=duration,competed=completed)
+            activity = models.Activity(activityid=actid,name=name,startdate=startdate,duration=duration,completed=completed)
             
-        consists_of = models.Consists_Of(phaseid=phase.phaseid,activityid=activity.activityid)
+        consists_of = models.Consists_Of(phaseid=phase.Phase.phaseid,activityid=activity.activityid)
         
         db.create_all()
         db.session.add(activity)
         db.session.add(consists_of)
         db.session.commit()
         
-        out = {'error':None, 'data':[], 'message':'Success'}
+        return redirect(url_for('activity',activityid=actid))
+        
+    return render_template('newactivity.html',titleid=titleid)
+    
+@app.route('/api/<titleid>/milestones',methods=['GET'])
+@login_required
+def milestonelist(titleid):
+    
+    if request.method == 'GET':
+        
+        mlist = db.session.query(models.Title,models.Has,models.Phase,models.Includes,models.Milestone).join(models.Has,models.Title.titleid == models.Has.titleid).join(models.Phase,models.Has.phaseid == models.Phase.phaseid).join(models.Includes,models.Phase.phaseid == models.Includes.phaseid).join(models.Milestone,models.Includes.milestoneid == models.Milestone.milestoneid).filter(models.Phase.current == True, models.Title.titleid == titleid).all()
+
+        out = []
+       
+        for milestone in mlist:
+            
+            if milestone.Milestone.achieved:
+                achieved = 'Yes'
+            else:
+                achieved = 'No'
+           
+            record = {"id":milestone.Milestone.milestoneid, "name":milestone.Milestone.name, "date":milestone.Milestone.date.date().strftime("%a, %B %d, %Y"), "achieved": achieved}
+            
+            out.append(record)
+        
+        out = {'error':None, 'data':out, 'message':'Success'}
         
         return jsonify(out)
+    
+@app.route('/api/<titleid>/milestone/new',methods=['POST'])
+@login_required
+def newmilestone(titleid):
+    
+    if request.method == 'POST':
+        
+        data = request.form
+        
+        print (data,sys.stderr)
+        
+        phase = db.session.query(models.Phase,models.Has).join(models.Has, models.Phase.phaseid == models.Has.phaseid).filter(models.Has.titleid == titleid, models.Phase.current == True).first()
+        
+        milestoneid = genID()
+        name = data['name']
+        date = data['date']
+        achieved = False
+        
+        milestone = models.Milestone(milestoneid=milestoneid,name=name,date=date,achieved=achieved)
+            
+        includes = models.Includes(phaseid=phase.Phase.phaseid,milestoneid=milestone.milestoneid)
+        
+        db.create_all()
+        db.session.add(milestone)
+        db.session.add(includes)
+        db.session.commit()
+        
+        return redirect(url_for('titleinfo',titleid=titleid))
+        
+@app.route('/api/<titleid>/milestone/<milestoneid>/edit',methods=['POST'])
+@login_required
+def milestone(titleid,milestoneid):
+        
+        if request.method == 'POST':
+        
+            data = request.form
+            
+            print (data,sys.stderr)
+            
+            milestone = models.Milestone.query.filter_by(milestoneid=milestoneid).first()
+            
+            if 'date' in data and data['date'] != '':
+                milestone.date = data['date']
+            
+            if 'achieved' in data and data['achieved'] != '':
+                milestone.achieved = data['achieved']
+                
+            db.session.add(milestone)
+            db.session.commit()
+            
+            return redirect(url_for('titleinfo',titleid=titleid))
         
 '''ACTIVITY MANAGEMENT'''
+
+def activitytotal(activityid):
+    
+    resList = db.session.query(models.Resource, models.Uses).join(models.Uses,models.Resource.resourceid == models.Uses.resourceid).filter(models.Uses.activityid == activityid).all()
+    
+    costs = []
+    
+    for r in resList:
+        if db.session.query(db.exists().where(models.HumanResource.resourceid == r.Resource.resourceid)).scalar():
+            h = models.HumanResource.query.filter_by(resourceid=r.Resource.resourceid).first()
+            costs.append(h.rate * h.duration)
+        else:
+            m = models.MaterialResource.query.filter_by(resourceid=r.Resource.resourceid).first()
+            costs.append(m.unitcost * m.qty)
+    
+    if costs == []:
+        return 0
+        
+    return sum(costs)
+    
+def activityallocation(activityid,total):
+    
+    phasebudget = db.session.query(models.Phase,models.Consists_Of).join(models.Consists_Of,models.Consists_Of.phaseid == models.Phase.phaseid).filter(models.Consists_Of.activityid == activityid).first().Phase.budget
+    
+    if phasebudget == 0:
+        return 0
+    else:
+        return (total/phasebudget)*100
+        
 
 @app.route('/activity/<activityid>',methods=['GET','POST'])
 @login_required
 def activity(activityid):
     """Render the website's activity page."""
     
-    record = models.Activity.query.filter_by(activityid=activityid).first()
+    activity = models.Activity.query.filter_by(activityid=activityid).first()
     event = models.Event.query.filter_by(activityid=activityid).first()
+    total = activitytotal(activityid)
+    allocation = activityallocation(activityid,total)
+    
     if request.method == "POST":
         """Get data"""
         data = request.form
         
         if db.session.query(db.exists().where(models.Activity.activityid==activityid)):
-            record.name = data['name']
-            record.statdate = data['startdate']
-            record.duration = data['duration']
-            record.completed = data['completed']
-            db.session.add(record)
+            activity.name = data['name']
+            activity.statdate = data['startdate']
+            activity.duration = data['duration']
+            activity.completed = data['completed']
+            db.session.add(activity)
         
         if db.session.query(db.exists().where(models.Event.activityid==activityid)):
             
@@ -527,10 +632,10 @@ def activity(activityid):
             
         db.commit()
         
-    if db.session.query(db.exists().where(models.Event.activityid==activityid)):
-        return render_template('event.html', event=event)
+    if db.session.query(db.exists().where(models.Event.activityid==activityid)).scalar():
+        return render_template('event.html', event=event, total=total, allocation=allocation)
     else:
-        return render_template('activity.html', activity=activity)
+        return render_template('activity.html', activity=activity, total=total, allocation=allocation)
 
 @app.route('/api/<activityid>',methods = ['GET','POST'])
 @login_required
@@ -541,9 +646,11 @@ def activityinfo(activityid):
     if request.method == 'GET':
         
         event = models.Event.query.filter_by(activityid = activityid).first()
+        total = activitytotal(activityid)
+        allocation = activityallocation(activityid,total)
         
         if db.session.query(db.exists().where(models.Event.activityid==activityid)):
-            data = {'name':event.name, 'startdate':event.startdate,'duration':event.duration,'completed':event.completed, 'starttime': event.starttime, 'endtime': event.endtime, 'venue': event.venue}
+            data = {'name':event.name, 'startdate':event.startdate,'duration':event.duration,'completed':event.completed, 'starttime': event.starttime, 'endtime': event.endtime, 'venue': event.venue, 'totalcost': total, 'allocation': allocation}
             
         else:
         
@@ -557,37 +664,42 @@ def activityinfo(activityid):
 @login_required
 def resourcelist(activityid):
     
-    resList = models.Resource.query.join(models.Uses,models.Resource.resourceid==models.Uses.resourceid).filter_by(models.Uses.activityid==activityid).all()
+    resList = db.session.query(models.Resource, models.Uses).join(models.Uses, models.Resource.resourceid == models.Uses.resourceid).filter(models.Uses.activityid == activityid).all()
     
     if request.method == 'GET':
-        data = []
+        h = []
+        m = []
         
         for resource in resList:
             
-            human = models.HumanResource.query.filter_by(resourceid==resource.resourceid).first()
+            human = models.HumanResource.query.filter_by(resourceid=resource.Resource.resourceid).first()
             
-            if db.session.query(db.exists().where(models.HumanResource.resourceid==resourceid)):
+            if db.session.query(db.exists().where(models.HumanResource.resourceid==resource.Resource.resourceid)).scalar():
                 
-                data.append({'name':human.name, 'duration':human.duration, 'rate':human.rate})
+                h.append({'name':human.name, 'duration':human.duration, 'rate':human.rate, 'total': human.duration * human.rate})
             
             else:
                 
-                material = models.MaterialResource.query.filter_by(resourceid==resource.resourceid).first()
-                data.append({'name':material.name,'qty':material.qty, 'unitcost':material.unitcost})
+                material = models.MaterialResource.query.filter_by(resourceid=resource.Resource.resourceid).first()
+                m.append({'name':material.name,'qty':material.qty, 'unitcost':material.unitcost, 'total': material.unitcost * material.qty})
         
+        data = {'human':h,'material':m}
         out = {'error':None, 'data':data, 'message':'Success'}
         
         return jsonify(out)
         
-@app.route('/api/<activityid>/resources/new',methods=['POST'])
+@app.route('/<activityid>/resources/new',methods=['GET','POST'])
 @login_required
-def addResource(activityid):
+def newresource(activityid):
     
     if request.method == 'POST':
-        data = request.get_json(force=True)
+        data = request.form
+        
+        print (data,sys.stderr)
         
         name = data['name']
         resid = genID()
+        
         if data['type']=='HumanResource':
             duration = data['duration']
             rate = data['rate']
@@ -595,21 +707,22 @@ def addResource(activityid):
             db.create_all()
             db.session.add(res)
             
-        else:
+        elif data['type']=='MaterialResource':
             qty = data['qty']
             unitcost = data['unitcost']
             res = models.MaterialResource(resourceid=resid,name=name,qty=qty,unitcost=unitcost)
             db.create_all()
             db.session.add(res)
-            
+        else:
+            abort(400)
+        
         uses = models.Uses(activityid=activityid,resourceid=resid)
         db.session.add(uses)
         db.session.commit()
         
-         
-        out = {'error':None, 'data':{}, 'message':'Success'}
+        return redirect(url_for('activity',activityid=activityid))
         
-        return jsonify(out)
+    return render_template('newresource.html',activityid=activityid)
         
 '''FILE MANAGEMENT'''
         

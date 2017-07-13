@@ -1,21 +1,57 @@
 {% extends "base.html" %}
 
 {% block main %}
+<div>
+    <h1>Activity Details</h1>
+    <h4>{{ activity.name }}</h4>
+    
+    <p>Starting: {{ activity.startdate.date() }} and continuing for {{ activity.duration }} day(s)</p>
+   
+</div>
+<div ng-controller="ResourceListController" ng-init="get({{ activity.activityid }})">
+    <div>
+        <h3>Human Resources</h3>
+        <table class="table table-hover">
+            <tr>
+                <th>Name</th>
+                <th>Rate</th>
+                <th>Duration (hrs)</th>
+                <th>Total Cost</th>
+            </tr>
+            <tr ng-repeat="h in humanresources">
+                <td>/# h.name #/</td>
+                <td>$/# h.rate #//hr</td>
+                <td>/# h.duration #/</td>
+                <td>$/# h.total #/</td>
+            </tr>
+        </table>
+        <form class='btn-form' action="{{ url_for('newresource',activityid=activity.activityid) }}">
+            <input type="submit" value="+" class="btn btn-circle"/>Add Resource
+        </form>
+    </div>
+    
+    <div>
+        <h3>Material Resources</h3>
+        <table class="table table-hover">
+            <tr>
+                <th>Name</th>
+                <th>Unit Cost</th>
+                <th>Quantity</th>
+                <th>Total Cost</th>
+            </tr>
+            <tr ng-repeat="m in materialresources">
+                <td>/# m.name #/</td>
+                <td>/# m.unitcost #/</td>
+                <td>/# m.qty #/</td>
+                <td>/# m.total #/</td>
+            </tr>
+        </table>
+        <form class='btn-form' action="{{ url_for('newresource',activityid=activity.activityid) }}">
+            <input type="submit" value="+" class="btn btn-circle"/> Add Resource
+        </form>
+    </div>
+</div>
 
-<form method="POST" enctype="multipart/form-data">
-     <div class="form-group">
-         <br>
-        <input type="text" name="name" placeholder="Name"/> 
-      </div>
-     <div class="form-group">
-         <br>
-        <input type="date" name="startdate"/> 
-      </div>
-     <div class="form-group">
-         <br>
-        <input type="text" name="duration" placeholder="Duration"/> 
-      </div>
-      <button type="submit" name="submit" >Submit</button>
-</form>
+
 
 {% endblock %}

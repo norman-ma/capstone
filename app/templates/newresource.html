@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block main %}
+<h1 class="page-header">New Resource</h1>
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <ul class=flashes>
+    {% for message in messages %}
+        <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+
+  <div class="Profile-form">
+    <form name= "newproject" action = "{{ url_for('newresource',activityid=activityid) }}" method="POST">
+        <div class="form-group">
+            <input type="text" name="name" placeholder="Resource Name"/> 
+        </div>
+        <div class="form-group">
+            <label for="type">Type</label>
+            <select name="type" ng-model="type">
+                <option value="HumanResource">Human Resource</option>
+                <option value="MaterialResource">Material Resource</option>
+            </select> </div>
+        </div>
+        <div class="form-group" ng-show="type=='HumanResource'">
+            <label for='rate'>Rate</label>
+            $<input type="number" step="0.01" name="rate" placeholder='0'/>/hr
+        </div>
+        <div class="form-group" ng-show="type=='HumanResource'">
+            <label for='duration'>Duration</label>
+            <input type="number" name='duration' /> hour(s)
+        </div>
+        <div class="form-group" ng-show="type == 'MaterialResource'">
+            <label for='unitcost'>Unit Cost</label>
+            $<input type="number" step="0.01" name="unitcost" placeholder='0.00'/>
+        </div>
+        <div class="form-group" ng-show="type == 'MaterialResource'">
+            <label for='qty'>Quantity</label>
+            <input type="number" name='qty' />
+        </div>
+       
+        <button id="newTitle" type="submit" name="submit">Submit</button>
+    </form>
+  </div>
+{% endblock %}

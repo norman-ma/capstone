@@ -11,7 +11,7 @@
             <th>Status</th>
             <th>Stage</th>
         </tr>
-        <tr ng-repeat = "t in titles" ng-click = "go(t.id)">
+        <tr ng-repeat = "t in titles" ng-click = "go('/title/'+t.id)">
             <td>/# t.title #/</td>
             <td>/# t.subtitle #/</td>
             <td>/# t.status #/</td>
@@ -20,8 +20,8 @@
     </table>        
 </div>
 
-<div>
-    <a href="{{ url_for('newtitle') }}"><button type='button rounded-circle' class="btn btn-default btn-circle">+</button> New Title</a>
-</div>
+<form action="{{url_for('newtitle')}}">
+    <input type="submit" value="+" class="btn btn-circle"/> New Title
+</form>
 
 {% endblock %}

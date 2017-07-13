@@ -4,14 +4,12 @@
 <h2> Titles</h2>
 <table class='table table-hover'>
     <tr>
-        <th>TitleID</th>
         <th>Title</th>
         <th>Subtitle</th>
         <th>Status</th>
     </tr>
     {% for title in result %}
-    <tr>
-        <td><a href = "/title/{{ title.id }}">{{ title.id }}</a></td>
+    <tr ng-click="go('/title/{{ title.id }}')">
         <td>{{ title.title }}</td>
         <td>{{ title.subtitle }}</td>
         <td>{{ title.status }}</td>

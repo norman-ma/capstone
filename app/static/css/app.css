@@ -2,3 +2,8 @@ body {
     padding-top: 50px;
 }
 
+.btn-circle {
+    border-radius: 50%;
+    background-color: #101010;
+    color: white;
+}

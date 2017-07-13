@@ -5,6 +5,14 @@ app.config(['$interpolateProvider', function($interpolateProvider) {
     $interpolateProvider.endSymbol('#/');
 }]);
 
+app.controller("ParentController",["$scope","$window",function($scope,$window){
+    
+    $scope.go = function(url){
+        $window.location.href = url;
+    };
+    
+}]);
+
 app.controller("InProgressController", ["$scope","TitleService","$window",function($scope,TitleService,$window){
     
     $scope.get = function(role){
@@ -33,9 +41,11 @@ app.controller("InProgressController", ["$scope","TitleService","$window",functi
         
     };
     
-    $scope.go = function(id){
-        $window.location.href = '/title/'+id;
+    $scope.go = function(url){
+        console.log(url);
+        $scope.$parent.go(url);
     };
+    
 }]);
 
 app.factory("TitleService",["$http",function($http){
@@ -54,4 +64,123 @@ app.factory("TitleService",["$http",function($http){
     };
     
     return TitleService;
+}]);
+
+app.controller('ActivityListController',["$scope","ActivityService",function($scope,ActivityService){
+    
+    $scope.get = function(titleid,complete,current){
+        var settings = {};
+        settings.complete = complete;
+        settings.current = current;
+        
+        ActivityService.get(titleid,settings)
+            .then(function(result){
+                $scope.activities = result;
+                console.log($scope.activities);
+            });
+    };
+}]);
+
+app.factory('ActivityService',["$http",function($http){
+    
+    var ActivityService = {};
+    
+    ActivityService.get = function(titleid,settings){
+        return $http
+            .post('/api/'+titleid+'/activity',settings)
+            .then(function(res){
+                console.log(res);
+                if(res.data.error == null){
+                    return res.data.data;
+                }
+            });
+    };
+    
+    return ActivityService;
+}]);
+
+app.controller('ResourceListController',["$scope","ResourceService",function($scope,ResourceService){
+    
+    $scope.get = function(activityid){
+        ResourceService.get(activityid)
+            .then(function(result){
+                $scope.humanresources = result.human;
+                $scope.materialresources = result.material;
+                console.log($scope.activities);
+            });
+    };
+}]);
+
+app.factory('ResourceService',["$http",function($http){
+    
+    var ResourceService = {};
+    
+    ResourceService.get = function(activityid){
+        return $http
+            .get('/api/'+activityid+'/resources')
+            .then(function(res){
+                console.log(res);
+                if(res.data.error == null){
+                    return res.data.data;
+                }
+            });
+    };
+    
+    return ResourceService;
+}]);
+
+app.controller('MilestoneController',["$scope","MilestoneService","$sce",function($scope,MilestoneService,$sce){
+    
+    $scope.get = function(titleid){
+        MilestoneService.get(titleid)
+            .then(function(result){
+                $scope.milestones = result;
+                console.log($scope.milestones);
+            });
+    };
+    
+    $scope.new = false;
+    
+    $scope.togglenew = function(){
+        $scope.new = !$scope.new;
+    };
+    
+    $scope.edit = false;
+    
+    $scope.toggleedit = function(titleid,milestone){
+        $scope.milestone = milestone;
+        $scope.url = $sce.trustAsUrl('/api/'+titleid+'/milestone/'+milestone.id+'/edit');
+        $scope.edit = !$scope.edit;
+    };
+    
+    
+}]);
+
+app.factory('MilestoneService',["$http",function($http){
+    
+    var MilestoneService = {};
+    
+    MilestoneService.get = function(titleid){
+        return $http
+            .get('/api/'+titleid+'/milestones')
+            .then(function(res){
+                console.log(res);
+                if(res.data.error == null){
+                    return res.data.data;
+                }
+            });
+    };
+    
+    MilestoneService.new = function(titleid,data){
+        return $http
+            .post('/api/'+titleid+'/milestone/new',data)
+            .then(function(res){
+                console.log(res);
+                if(res.data.error == null){
+                    return res.data.data;
+                }
+            });
+    };
+    
+    return MilestoneService;
 }]);

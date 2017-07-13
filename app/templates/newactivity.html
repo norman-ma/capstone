@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block main %}
+<h1 class="page-header">New Activity</h1>
+<p class="lead"> Activity details</p>
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <ul class=flashes>
+    {% for message in messages %}
+        <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+
+  <div class="Profile-form">
+    <form name= "newactivity" action = "{{ url_for('newactivity',titleid=titleid) }}" method="POST">
+        <div class="form-group">
+            <input type="text" name="name" placeholder="Activity Name" /> 
+        </div>
+        <div class="form-group">
+            <label for="startdate">Start Date</label>
+            <input type="date" name="startdate"/> 
+        </div>
+        <div class="form-group">
+            <label for="duration">Duration</label>
+            <input type="number" name="duration" /> days
+        </div>
+        <div class="form-group">
+            <label for="isEvent">Is Activity and Event?</label>
+            <input type="checkbox" name="isEvent" ng-model="isEvent"/>
+        </div>
+        <div class="form-group" ng-if='isEvent'>
+            <label for="starttime">Start Time</label>
+            <input type="time" name="starttime"/> 
+        </div>
+        <div class="form-group" ng-if='isEvent'>
+            <label for="endtime">End Time</label>
+            <input type="time" name="endtime"/> 
+        </div>
+        <div class="form-group"  ng-if='isEvent'>
+            <input  type="text" name="venue" placeholder="Event venue"/> 
+        </div>
+        <button id="newTitle" type="submit" name="submit">Submit</button>
+    </form>
+  </div>
+{% endblock %}

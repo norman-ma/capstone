@@ -98,6 +98,7 @@ class Milestone(db.Model):
     milestoneid = db.Column(db.Integer,primary_key=True)
     name = db.Column(db.String(80))
     date = db.Column(db.DateTime)
+    achieved = db.Column(db.Boolean)
     includes = db.relationship('Includes',backref='Milestone',lazy='select')
     
     
