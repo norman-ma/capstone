@@ -1,64 +1,181 @@
 {% extends "base.html" %}
 
 {% block main %}
-<div>
+<div ng-controller='StandardController'>
     <h1> {{ title.Title.title }}</h1>
     <h4><em> {{ title.Title.subtitle }} </em><br/>{{ title.Author.lastname }}, {{ title.Author.firstname }}</h4>
     <p>Category: {{ title.Category.name }}</p>
     <div>
         <p>{{ title.Title.description }}</p>
     </div>
+    <span class='btn-form' ng-click="toggleshow()"><em>edit</em></span>
+    <form action="{{ url_for('edittitle',titleid = title.Title.titleid) }}" ng-if="show" method='POST'>
+        <table class='table'>
+            <tr>
+                <th>Title</th>
+                <th>Subtitle</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+            <tr>
+                <td><input type='text' name='title'/></td>
+                <td><input type='text' name='subtitle'/></td>
+                <td>
+                    <select name="category">
+                        <option value=""></option>
+                        <option value="0">New and Forthcoming</option>
+                        <option value="1">Bestsellers & Award Winners</option>
+                        <option value="2">Biography/Memoirs</option>
+                        <option value="3">Caribbean Cultural Studies</option>
+                        <option value="4">Caribbean History</option>
+                        <option value="5">Caribbean Linguistics</option>
+                        <option value="6">Caribbean Literature</option>
+                        <option value="5">Economics</option>
+                        <option value="7">Education</option>
+                        <option value="8">Environmental Studiest</option>
+                        <option value="9">Gender Studies</option>
+                        <option value="10">Gender Studies</option>
+                        <option value="11">General Interest</option>
+                        <option value="12">Legal Studies</option>
+                        <option value="13">Medical Studies</option>
+                        <option value="14">Political Science</option>
+                        <option value="15">Psychology</option>
+                        <option value="16">Sociology</option>
+                    </select>
+                </td>
+                <td>
+                    <textarea name="description" placeholder="Description" rows="5" cols='15'></textarea>
+                </td>
+                <td>
+                    <select name="status">
+                        <option value=""></option>
+                        <option value="IN PROGRESS">IN PROGRESS</option>
+                        <option value="ON HOLD">ON HOLD</option>
+                        <option value="COMPLETED">COMPLETED</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                    </select>
+                </td>
+                <td>
+                    <input type='submit' value='Submit'>
+                </td>
+            </tr>
+        </table>
+    </form>
 </div>
-{% if pub != None %}
-<div>
-    <h3>Publishing Data</h3>
-    <table class="table table-hover">
-        <tr>
-            <th>ISBN</th>
-            <th>Dimensions</th>
-            <th>Page Count</th>
-            <th>Publication Date</th>
-        </tr>
-        <tr>
-            <td>{{ pub.isbn }}</td>
-            <td>{{ pub.width }} x {{ pub.height }}</td>
-            <td>{{ pub.pagecount }}</td>
-            <td>{{ pub.pubdate }}</td>
-            
-        </tr>
-    </table>>
-</div>
-{% else %}
-<div>
-    <p>Awaiting Publishing Data</p>
-</div>
-{% endif %}
 
-{% if sales != None %}
-<div>
-    <h4>Sales Data</h4>
-    <table class="table table-hover">
+<div ng-controller='PhaseController'>
+    <h4>Current Stage: {{ title.Phase.stage }}</h4>
+    <span class='btn-form' ng-click='next({{ title.Title.titleid }},"{{ title.Phase.stage }}")'><em>Next Phase</em></span>
+    <table class='table'>
         <tr>
-            <th>Local Sales</th>
-            <th>Regional Sales</th>
-            <th>International Sales</th>
-            <th>Total Sales</th>
-        </tr>
-        <tr>
-            <td>${{ sales.localsales }}</td>
-            <td>${{ sales.regionalsales }}</td>
-            <td>${{ sales.internationalsales }}</td>
-            <td><strong>${{ sales.totalsales }}</strong></td>
+            <td>Budget</td>
+            <td>${{ title.Phase.budget }}</td>
+            <td ng-click="toggleshow()"><em>edit</em></td>
         </tr>
     </table>
+    <form action="{{ url_for('setbudget',phaseid = title.Phase.phaseid) }}" ng-if="show" method='POST'>
+        <table class='table'>
+            <tr>
+                <td>Budget</td>
+                <td align='center'>$<input type="number" step='0.01' name='budget'/></td>
+                <td><input type="submit" value="Submit"/></td>
+            </tr>
+        </table>
+    </form>
 </div>
-{% else %}
-<div>
-    <p>Awaiting Sales Data</p>
-</div>
+<div ng-controller='StandardController'>
+{% if pub != None %}
+    <div>
+        <h4>Publishing Data</h4>
+        <span class='btn-form' ng-click='toggleshow()'><em>edit</em></span>
+        <table class="table table-hover">
+            <tr>
+                <th>ISBN</th>
+                <th>Dimensions</th>
+                <th>Page Count</th>
+                <th>Publication Date</th>
+            </tr>
+            <tr>
+                <td>{{ pub.isbn }}</td>
+                <td>{{ pub.width }} x {{ pub.height }}</td>
+                <td>{{ pub.pagecount }}</td>
+                <td>{{ pub.pubdate.date() }}</td>
+            </tr>
+        </table>
+    </div>
+    {% else %}
+    <div>
+        <table class='table'>
+            <tr>
+                <td>Awaiting Publishing Data</td>
+                <td></td>
+                <td ng-click='toggleshow()'><em>add</em></td>
+            </tr>
+        </table>
+    </div>
 {% endif %}
+    <form action="{{ url_for('publishing',titleid=title.Title.titleid) }}" ng-if='show' method="POST">
+        <table class="table">
+            <tr>
+                <th>ISBN</th>
+                <th>Dimensions</th>
+                <th>Page Count</th>
+                <th>Publication Date</th>
+                <th></th>
+            </tr>
+            <tr>
+                <td><input type='text' name='isbn'/></td>
+                <td><input type='number' step='0.01' name='width'/> x <input type='number' step='0.01' name='height'/></td>
+                <td><input type='number' name='pagecount'/></td>
+                <td><input type='date' name='pubdate'/></td>
+                <td><input type='submit' value='submit'></td>
+            </tr>
+        </table>
+    </form>
+</div>
+<div ng-controller='StandardController'>
+    <div>
+        <h4>Sales Data</h4>
+        <span class='btn-form' ng-click='toggleshow()'><em>edit</em></span>
+        <table class="table table-hover">
+            <tr>
+                <th>Local Sales</th>
+                <th>Regional Sales</th>
+                <th>International Sales</th>
+                <th>Total Sales</th>
+            </tr>
+            <tr>
+                <td>${{ sales.localsales }}</td>
+                <td>${{ sales.regionalsales }}</td>
+                <td>${{ sales.internationalsales }}</td>
+                <td><strong>${{ sales.totalsales }}</strong></td>
+            </tr>
+        </table>
+    </div>
+    <form action="{{ url_for('sales',titleid=title.Title.titleid) }}" ng-if='show' method="POST">
+        <table class="table">
+            <tr>
+                <th>Local Sales</th>
+                <th>Regional Sales</th>
+                <th>International Sales</th>
+                <th></th>
+            </tr>
+            <tr>
+                <td><input type='number' step='0.01' name='localsales'/></td>
+                <td><input type='number' step='0.01' name='regionalsales'/></td>
+                <td><input type='number' step='0.01' name='internationalsales'/></td>
+                <td><input type='submit' value='submit'></td>
+            </tr>
+        </table>
+    </form>
+</div>
 <div ng-controller='ActivityListController'>
     <h4>Current Activities</h4>
+    <form class='btn-form' action="{{ url_for('newactivity',titleid = title.Title.titleid) }}">
+        <input type="submit" value="+" class="btn btn-circle"/> New Activity
+    </form>
     <table class="table table-hover" ng-init="get({{ title.Title.titleid }},false,true)">
         <tr>
             <th>Name</th>
@@ -72,18 +189,14 @@
             <td>/# a.startdate #/</td>
             <td>/# a.duration #/</td>
             <td>$/# a.total #/</td>
-            <td>/# a.allocation #/%</td>
+            <td>/# a.allocation.toFixed(2) #/%</td>
         </tr>
     </table>
-    
-    <form class='btn-form' action="{{ url_for('newactivity',titleid = title.Title.titleid) }}">
-        <input type="submit" value="+" class="btn btn-circle"/> New Activity
-    </form>
-
 </div>
 
 <div ng-controller='MilestoneController'>
     <h4>Current Phase Milestones</h4>
+    <span class="btn-form"><button type="submit" class="btn btn-circle" ng-click="togglenew()">+</button> New Milestone</span>
     <table class="table table-hover" ng-init="get({{ title.Title.titleid }})">
         <tr>
             <th>Name</th>
@@ -98,8 +211,6 @@
             <td ng-click="toggleedit({{ title.Title.titleid }},m)"><em>edit</em></td>
         </tr>
     </table>
-    
-    <button type="submit" class="btn btn-circle" ng-click="togglenew()">+</button> New Milestone
     
     <form action="{{ url_for('newmilestone',titleid = title.Title.titleid) }}" ng-if="new" method='POST'>
         <div class="form-group">

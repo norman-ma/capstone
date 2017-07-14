@@ -38,7 +38,7 @@ class Authentication(db.Model):
 class Phase(db.Model):
     __table_args__ = {'extend_existing': True} 
     phaseid = db.Column(db.Integer,primary_key=True)
-    budget = db.Column(db.Integer)
+    budget = db.Column(db.Float)
     stage = db.Column(db.String(80))
     current = db.Column(db.Boolean)
     owns = db.relationship('Owns',backref='Phase',lazy='select')

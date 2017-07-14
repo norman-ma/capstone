@@ -184,3 +184,80 @@ app.factory('MilestoneService',["$http",function($http){
     
     return MilestoneService;
 }]);
+
+app.controller("PhaseController",["$scope","PhaseService",function($scope,PhaseService){
+    
+    $scope.show = false;
+    
+    $scope.toggleshow = function(){
+        $scope.show = !$scope.show;
+    };
+    
+    $scope.next = function(titleid,current){
+        var settings = {};
+        
+        console.log(titleid,current);
+        
+        if(current === 'Acquisition'){
+            settings.next = "EditorialProduction";
+        }else if(current === 'EditorialProduction'){
+            settings.next = "SalesMarketing";
+        }else{
+            settings.next = null;
+        }
+        
+        PhaseService.next(titleid,settings)
+            .then(function(res){
+                return res;
+            });
+    };
+    
+}]);
+
+app.factory("PhaseService",["$http",function($http){
+    
+    var PhaseService = {};
+    
+    PhaseService.setBudget = function(phaseid,budget){
+        var settings = {};
+        settings.budget = budget;
+        
+        return $http
+            .post("/api/phase/"+phaseid+"/budget",settings)
+            .then(function(res){
+                return res;
+            });
+    };
+    
+    PhaseService.next = function(titleid,settings){
+        return $http
+            .post("/api/"+titleid+"/stage/next",settings)
+            .then(function(res){
+                console.log(res);
+                if(res.data.error == null){
+                    return res.data.data;
+                }
+            });
+    };
+    return PhaseService;
+}]);
+
+app.controller("StandardController",["$scope",function($scope){
+    
+    $scope.show = false;
+    
+    $scope.toggleshow = function(){
+        $scope.show = !$scope.show;
+    };
+    
+}]);
+
+app.controller("SearchController",["$scope","$sce",function($scope,$sce){
+    
+    $scope.keyword = '';
+    
+    $scope.url = function(){
+        return  $sce.trustAsUrl('/search?keyword='+$scope.keyword);
+    };
+    
+}]);

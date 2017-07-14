@@ -7,3 +7,8 @@ body {
     background-color: #101010;
     color: white;
 }
+
+.btn-form {
+    float:right;
+    clear: both;
+}

@@ -93,7 +93,7 @@ def user():
     elif current_user.role == 'MarketingManager':
         return render_template('marketing.html')
     
-@app.route('/search',methods=['GET'])
+@app.route('/search',methods=['GET','POST'])
 def search():
     """Render the website's search page."""
     
@@ -101,14 +101,20 @@ def search():
         
         keyword = request.args.get('keyword')
         
-        query = models.Title.query.join(models.Publishing, models.Title.titleid == models.Publishing.titleid).filter_by(keyword in models.Title.title or keyword in models.Title.subtitle or keyword in models.Publishing.isbn).all()
+        query = db.session.query(models.Title,models.By, models.Author, models.Publishing).join(models.By, models.Title.titleid == models.By.titleid).join(models.Author,models.Author.authorid == models.By.authorid).join(models.Publishing,models.Publishing.titleid==models.Title.titleid)
         
-        data = []
+        titleq = query.filter(models.Title.title == keyword).all()
+        subtitleq = query.filter(models.Title.subtitle == keyword).all()
+        authorq = query.filter(models.Author.firstname == keyword or models.Author.lastname == keyword).all()
+        isbnq = query.filter(models.Publishing.isbn == keyword).all()
+        data = titleq+subtitleq+authorq+isbnq
         
-        for result in query:
-            data.append({'titleid':result.titleid,'title':result.title})
+        out = []
         
-    return render_template('search.html',result=data)
+        for result in data:
+            out.append({'id':result.Title.titleid,'title':result.Title.title,'author':result.Author.lastname+', '+result.Author.firstname[0], 'isbn':result.Publishing.isbn})
+        
+        return render_template('results.html',result=out)
 
 
 '''LOGIN/LOGOUT'''    
@@ -261,7 +267,7 @@ def newtitle():
         db.session.add(phase3)
         db.session.add(has3)
         
-        sales = models.Sales(titleid=tid,localsales=0,regionalsales=0,internationalsales=0)
+        sales = models.Sales(titleid=tid,localsales=0,regionalsales=0,internationalsales=0,totalsales=0)
         db.session.add(sales)
         
         belongs_to = models.Belongs_to(titleid=tid,categoryid=category)
@@ -277,6 +283,36 @@ def newtitle():
             flash('Title already exists')
             
     return render_template('newtitle.html')
+    
+@app.route('/api/title/<titleid>/edit',methods = ['POST'])
+@login_required
+def edittitle(titleid):
+    
+    if request.method == "POST":
+        
+        record = models.Title.query.filter_by(titleid=titleid).first()
+        
+        data = request.form
+        
+        if 'title' in data and data['title'] != '':
+            record.title = data['title']
+            
+        if 'subtitle' in data and data['subtitle'] != '':
+            record.subtitle = data['subtitle']
+        
+        if 'description' in data and data['description'] != '':
+            record.description = data['description']
+        
+        if 'category' in data and data['category'] != '':
+            record.category = data['category']
+        
+        if 'status' in data and data['status'] != '':
+            record.status = data['status']
+            
+        db.session.add(record)
+        db.session.commit()
+        
+        return redirect(url_for('titleinfo',titleid=titleid))
     
 @app.route('/titles', methods=['GET'])
 @login_required
@@ -298,7 +334,7 @@ def titleinfo(titleid):
     if not db.session.query(db.exists().where(models.Title.titleid==titleid)).scalar():
         abort(404)
     
-    title = db.session.query(models.Title, models.By, models.Author, models.Belongs_to, models.Category).join(models.By, models.Title.titleid == models.By.titleid).join(models.Author, models.Author.authorid == models.By.authorid).join(models.Belongs_to, models.Belongs_to.titleid == models.Title.titleid).join(models.Category,models.Category.categoryid == models.Belongs_to.categoryid).filter(models.Title.titleid == titleid).first()
+    title = db.session.query(models.Title, models.By, models.Author, models.Belongs_to, models.Category,models.Has,models.Phase).join(models.By, models.Title.titleid == models.By.titleid).join(models.Author, models.Author.authorid == models.By.authorid).join(models.Belongs_to, models.Belongs_to.titleid == models.Title.titleid).join(models.Category,models.Category.categoryid == models.Belongs_to.categoryid).join(models.Has,models.Has.titleid == models.Title.titleid).join(models.Phase,models.Phase.phaseid == models.Has.phaseid).filter(models.Title.titleid == titleid,models.Phase.current == True).first()
     
     if db.session.query(db.exists().where(models.Publishing.titleid == titleid)).scalar():  
         pub = models.Publishing.query.filter_by(titleid=titleid).first()
@@ -354,69 +390,80 @@ def titles():
         
         return jsonify(out)
         
-@app.route('/<titleid>/sales', methods = ['GET','POST'])
+@app.route('/api/<titleid>/sales', methods = ['POST'])
 @login_required
 def sales(titleid):
     """Render the website's sales page."""
     
-    record = models.Sales.query.filter_by(titleid == titleid).first()
-    
     if request.method == "POST":
         """Get data"""
         data = request.form
-        totalsales  = data['totalsales']
-        internationalsales = data['internationalsales']
-        regionalsales = data['regionalsales']
         
-        if db.session.query(db.exists().where(models.Sales.titleid==titleid)):
+        if db.session.query(db.exists().where(models.Sales.titleid==titleid)).scalar():
             
-            record.totalsales = totalsales
-            record.internationalsales = internationalsales
-            record.regionalsales = regionalsales
+            record = models.Sales.query.filter_by(titleid == titleid).first()
+            if 'localsales' in data and data['localsales'] != '':
+                record.localsales = data['localsales']
+                
+            if 'internationalsales' in data and data['internationalsales'] != '':    
+                record.internationalsales = data['internationalsales']
             
-        else:
+            if 'regionalsales' in data and data['regionalsales'] != '':
+                record.regionalsales = data['regionalsales']
             
-            new = models.Sales(titleid = titleid, totalsales = totalsales, internationalsales=internationalsales, regionalsales = regionalsales)
-            db.session.add(new)
+            record.totalsales = record.localsales + record.regionalsales + record.internationalsales
+            
+            db.session.add(record)
             
         db.session.commit()
         
-        
-    return render_template('sales.html')
+        return redirect(url_for('titleinfo',titleid=titleid))
 
-@app.route('/<titleid>/publishing')
+@app.route('/api/<titleid>/publishing',methods=['POST'])
 @login_required
 def publishing(titleid):
-    """Render the website's publishing info"""
-    
-    record = models.Publishing.query.filter_by(titleid==titleid).first()
-        
 
     if request.method == "POST":
         """Get data"""
-        data = request.form
-        isbn = data['isbn']
-        width = data['width']
-        height = data['height']
-        pagecount = data['pagecount']
-        pubdate = data['pubdate']
         
-        if db.session.query(db.exists().where(models.Publishing.titleid==titleid)):
+        data = request.form
+        
+        if db.session.query(db.exists().where(models.Publishing.titleid==titleid)).scalar():
             
-            record.isbn = isbn
-            record.width = width
-            record.height = height
-            record.pagecount = pagecount
-            record.pubdate = pubdate
+            record = models.Publishing.query.filter_by(titleid=titleid).first()
+            
+            if 'isbn' in data and data['isbn'] != '':
+                record.isbn = data['isbn']
+            
+            if 'width' in data and data['width'] != '':    
+                record.width = data['width']
+            
+            if 'height' in data and data['heigh'] != '':
+                record.height = data['height']
+            
+            if 'pagecount' in data and data['pagecount'] != '':
+                record.pagecount = data['pagecount']
+            
+            if 'pubdate' in data and data['pubdate'] != '':
+                record.pubdate = data['pubdate']
+                
+            db.session.add(record)
             
         else:
             
+            isbn = data['isbn']
+            width = data['width']
+            height = data['height']
+            pagecount = data['pagecount']
+            pubdate = data['pubdate']
+            
             new = models.Publishing(titleid=titleid,isbn=isbn,width=width,height=height,pagecount=pagecount,pubdate=pubdate)
+            
             db.session.add(new)
             
         db.session.commit()
             
-    return render_template('publishing.html')   
+        return redirect(url_for('titleinfo',titleid=titleid))   
 
 @app.route('/api/<titleid>/activity',methods=['GET','POST'])
 @login_required
@@ -519,6 +566,61 @@ def milestonelist(titleid):
         out = {'error':None, 'data':out, 'message':'Success'}
         
         return jsonify(out)
+        
+'''PHASE MANAGEMENT'''
+
+@app.route('/api/phase/<phaseid>/budget', methods=['POST'])
+@login_required
+def setbudget(phaseid):
+    
+    phase = models.Phase.query.filter_by(phaseid=phaseid).first()
+    
+    titleid = db.session.query(models.Phase, models.Has).join(models.Has,models.Phase.phaseid==models.Has.phaseid).first().Has.titleid
+    
+    if request.method == 'POST':
+        
+        data = request.form
+        
+        print (data,sys.stderr)
+        
+        phase.budget = data["budget"]
+        
+        db.session.add(phase)
+        db.session.commit()
+        
+        return redirect(url_for("titleinfo",titleid=titleid))
+        
+@app.route('/api/<titleid>/stage/next', methods=['POST'])
+@login_required
+def nextphase(titleid):
+    
+    phases = db.session.query(models.Title,models.Has,models.Phase).join(models.Has,models.Title.titleid == models.Has.titleid).join(models.Phase, models.Phase.phaseid == models.Has.phaseid).filter(models.Title.titleid==titleid)
+    
+    if request.method == 'POST':
+        
+        data = request.get_json(force=True)
+        
+        print (data,sys.stderr)
+        
+        nxt = data["next"]
+        
+        if nxt != None:
+            cphase = phases.filter(models.Phase.current == True).first().Phase
+            nphase = phases.filter(models.Phase.stage == nxt).first().Phase
+            
+            cphase.current = False
+            nphase.current = True
+            
+            db.session.add(cphase)
+            db.session.add(nphase)
+                
+        db.session.commit()
+        
+        return redirect(url_for('titleinfo',titleid=titleid))
+        
+    
+
+'''MILESTONE MANAGEMENT'''
     
 @app.route('/api/<titleid>/milestone/new',methods=['POST'])
 @login_required
