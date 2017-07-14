@@ -20,11 +20,18 @@ import requests
 from passlib.hash import pbkdf2_sha512
 import smtplib
 import base64
-
+import os.path
 
 ###
 # Helper functions
 ###
+
+def listdir(path):
+    filelst = []
+    rootdir = path
+    for subdir, dirs, files in os.walk(rootdir):
+        filelst = [f for f in files if not f[0] == '.']
+    return filelst
 
 def saltedhash(raw,salt):
     salted = raw + salt
@@ -830,57 +837,62 @@ def newresource(activityid):
         
 @app.route('/api/<titleid>/files', methods=['GET'])
 @login_required
-@login_required
 def files(titleid):
     
-    #return redirect('file://'+app.config["SERVER_NAME"]+'/'+app.config['UPLOAD_FOLDER']+'/'+titleid)
-    
-    return redirect(static_folder)
+    files = listdir(app.config['UPLOAD_FOLDER']+'/'+str(titleid))
+    imgs = [f for f in files if 'jpg' in f or 'png' in f]
+    pdf = [f for f in files if 'pdf' in f]
+    epub = [f for f in files if 'epub' in f]
+    mobi = [f for f in files if 'mobi' in f]
+    doc = [f for f in files if f not in imgs and f not in pdf and f not in epub and f not in mobi]
         
-@app.route('/<titleid>/files/add', methods=['GET','POST'])
+    return render_template('files.html',titleid=titleid, files=files, imgs=imgs,pdf=pdf,epub=epub,mobi=mobi,doc=doc)
+        
+@app.route('/api/<titleid>/files/add', methods=['GET','POST'])
 @login_required
 def addfile(titleid):
-    current = models.Phase.query.join(models.Has, models.Phase.phaseid == models.Has.phaseid).add_columns(models.Phase.phaseid).filter_by(models.Has.titleid == titleid,models.Phase.current == True).first
-    owns = db.session.query(db.exists().where(models.Owns.userid==current_user.userid,models.Owns.phaseid==current.phaseid))
-    
     file_folder = app.config['UPLOAD_FOLDER']
     
-    if request.method == 'POST' and owns:
+    if request.method == 'POST':
         
-        data = request.get_jdon(force=True)
+        data = request.form
         name = data['name']
         version = data['version']
-        
         file = request.files['file']
-        filename = secure_filename(name+'_'+verrsion)
-        file.save(os.path.join(file_folder+'/'+titleid, filename))
         
-    return render_template('submitfile.html')
+        ext = os.path.splitext(file.filename)[1]
+        
+        filename = secure_filename(name+'_'+version+ext)
+        
+        if not os.path.isfile(filename):
+            file.save(os.path.join(file_folder+'/'+titleid, filename))
+        else:
+            flash("File already exists. Please change version.")
+        
+        return redirect(url_for('files',titleid=titleid)) 
     
 @app.route('/api/<titleid>/files/<file>/delete',methods=['DELETE'])
 @login_required
-def deletefile(titleid,file):
-    current = models.Phase.query.join(models.Has, models.Phase.phaseid == models.Has.phaseid).add_columns(models.Phase.phaseid).filter_by(models.Has.titleid == titleid,models.Phase.current == True).first
-    owns = db.session.query(db.exists().where(models.Owns.userid==current_user.userid,models.Owns.phaseid==current.phaseid))
-    
-    if request.method == 'DELETE' and owns and current_user.role in ['GeneralManager','LeadEditor']:
+def delete(titleid,file):
+    if request.method == 'DELETE':
         
         path  = app.config['UPLOAD_FOLDER']+'/'+titleid+'/'+file
         os.remove(path)
         
         out = {'error':None, 'data':{}, 'message':'Success'}
         
-        return jsonify(out)
+        return redirect(url_for('files',titleid=titleid))
         
         
-@app.route('/api/<titleid>/<file>',methods=['GET'])
+@app.route('/<titleid>/<file>',methods=['GET'])
 @login_required
 def download(titleid,file):
     
     if request.method  == 'GET':
         
-        uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER']+'/'+titleid)
-        return send_from_directory(directory=uploads, filename=file)
+        path  = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
+        
+        return send_from_directory(directory=path, filename=str(titleid)+'/'+file, as_attachment=True )
         
 
 ###

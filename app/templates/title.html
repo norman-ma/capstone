@@ -8,7 +8,9 @@
     <div>
         <p>{{ title.Title.description }}</p>
     </div>
+    {% if current_user.role == 'GeneralManager' %}
     <span class='btn-form' ng-click="toggleshow()"><em>edit</em></span>
+    {% endif %}
     <form action="{{ url_for('edittitle',titleid = title.Title.titleid) }}" ng-if="show" method='POST'>
         <table class='table'>
             <tr>
@@ -72,7 +74,9 @@
         <tr>
             <td>Budget</td>
             <td>${{ title.Phase.budget }}</td>
+            {% if current_user.role == "GeneralManager" or current_user.role == "FinancialManager" %}
             <td ng-click="toggleshow()"><em>edit</em></td>
+            {% endif %}
         </tr>
     </table>
     <form action="{{ url_for('setbudget',phaseid = title.Phase.phaseid) }}" ng-if="show" method='POST'>
@@ -111,7 +115,9 @@
             <tr>
                 <td>Awaiting Publishing Data</td>
                 <td></td>
+                {% if current_user.role == "GeneralManager" or current_user.role== "PublishingAssistant" or current_user.role=="LeadEditor"%}
                 <td ng-click='toggleshow()'><em>add</em></td>
+                {% endif %}
             </tr>
         </table>
     </div>
@@ -138,7 +144,9 @@
 <div ng-controller='StandardController'>
     <div>
         <h4>Sales Data</h4>
+        {% if current_user.role == "GeneralManager" or current_user.role == "FinancialManager" %}
         <span class='btn-form' ng-click='toggleshow()'><em>edit</em></span>
+        {% endif %}
         <table class="table table-hover">
             <tr>
                 <th>Local Sales</th>
@@ -235,7 +243,28 @@
         </div>
         <input type="submit" value="Submit"/>
     </form>
+</div>
 
+<div>
+    <h4>Files</h4>
+     <form class='btn-form' action="{{ url_for('files',titleid = title.Title.titleid) }}">
+        <input type="submit" value = '••' class="btn btn-circle"/> Go to File Listing
+    </form>
+    <form class="" action="{{ url_for('addfile',titleid=title.Title.titleid) }}" method="post" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="file">Upload your file</label>
+            <input type="file" name="file" class="form-control" />
+        </div>
+        <div class="form-group">
+            <label for="name">Filename</label>
+            <input type="text" name="name" class="form-control" />
+        </div>
+        <div class="form-group">
+            <label for="version">Version</label>
+            <input type="number" name="version" class="form-control" />
+        </div>
+        <button type="submit" name="submit" class="btn btn-primary">Save file</button>
+    </form>
 </div>
 
 {% endblock %}

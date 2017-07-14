@@ -242,6 +242,37 @@ app.factory("PhaseService",["$http",function($http){
     return PhaseService;
 }]);
 
+app.controller("FileController",["$scope","$FileService",function($scope,FileService){
+    
+    $scope.delete = function(titleid,file){
+        FileService.delete(titleid,file)
+            .then(function(res){
+                return res;
+            });
+    };
+    
+    
+}]);
+
+app.factory("FileService",["$http",function($http){
+    
+    var FileService = {};
+    
+    FileService.delete = function(titleid,file){
+        return $http
+            .delete("/api/"+titleid+"/files/"+file+"delete")
+            .then(function(res){
+                console.log(res);
+                if(res.data.error == null){
+                    return res.data.data;
+                }
+            });
+    };
+    
+    return FileService;
+    
+}]);    
+
 app.controller("StandardController",["$scope",function($scope){
     
     $scope.show = false;

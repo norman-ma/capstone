@@ -1,5 +1,30 @@
 {% extends "base.html" %}
 
 {% block main %}
+<div ng-controller='SearchController'>
+    {% include "search.html" %}
+</div>
+
+
+<div ng-controller = "InProgressController">
+    <h3>Titles In Progress</h3>
+    <form class='btn-form' action="{{url_for('newtitle')}}">
+        <input type="submit" value="+" class="btn btn-circle"/> New Title
+    </form>
+    <table class="table table-hover"  ng-init = "get('LeadEditor')">
+        <tr>
+            <th>Title</th>
+            <th>Subtitle</th>
+            <th>Status</th>
+            <th>Stage</th>
+        </tr>
+        <tr ng-repeat = "t in titles" ng-click = "go('/title/'+t.id)">
+            <td>/# t.title #/</td>
+            <td>/# t.subtitle #/</td>
+            <td>/# t.status #/</td>
+            <td>/# t.stage #/</td>
+        </tr>
+    </table>        
+</div>
 
 {% endblock %}

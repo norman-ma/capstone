@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block css %}{% endblock%}
+{% block main %}
+<h1 class="page-header">File Listing</h1>
+{% with filelist = doc %}
+    <h3>Documents</h3>
+  {% if filelist %}
+    <div>
+      <ul>
+      {% for file in filelist %}
+        <li>{{ file }}<span class='btn-form'><em>delete</em></span><span class='btn-form'><em>download</em></span></li>
+      {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+{% endwith %}
+
+{% with filelist = pdf %}
+    <h3>E-books: PDF</h3>
+  {% if filelist %}
+    <div>
+      <ul>
+      {% for file in filelist %}
+        <li>{{ file }}<span class='btn-form'><em>delete</em></span><span class='btn-form'><em>download</em></span></li>
+      {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+{% endwith %}
+
+{% with filelist = epub %}
+    <h3>E-books: EPUB</h3>
+  {% if filelist %}
+    <div>
+      <ul>
+      {% for file in filelist %}
+        <li>{{ file }}<span class='btn-form'><em>delete</em></span><span class='btn-form'><em>download</em></span></li>
+      {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+{% endwith %}
+
+{% with filelist = mobi %}
+    <h3>E-books: MOBI</h3>
+  {% if filelist %}
+    <div>
+      <ul>
+      {% for file in filelist %}
+        <li>{{ file }}<span class='btn-form'><em>delete</em></span><span class='btn-form'><em>download</em></span></li>
+      {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+{% endwith %}
+
+{% with imglist = imgs %}
+    <h3>Images</h3>
+  {% if imglist %}
+    <div>
+      {% for img in imglist %}
+        <div>    
+            <img src = "{{ url_for('static', filename='titles/'+titleid+'/'+img ) }}" height = '100px'><br>
+            <span ng-click="delete({{ titleid }},'{{ img }}')"><em>delete</em></span><br/>
+            <span><a href="{{ url_for('static',filename='titles/'+titleid+'/'+img) }}" download><em>download</em></a></span>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+{% endblock %}
